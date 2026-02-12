@@ -14,11 +14,17 @@
 **Fix:** Detect Socket.IO requests and return early  
 **Commits:** `441cc8a`, `57fa562`
 
-### Issue 3: 308 Permanent Redirect (LATEST)
+### Issue 3: 308 Permanent Redirect (Latest)
 **Status:** ✅ Fixed  
 **Cause:** Socket.IO adding trailing slash, Vercel redirecting it  
 **Fix:** Set `addTrailingSlash: false` on client and server  
 **Commits:** `47102dd`, `ea4a5f6`
+
+### Issue 4: 400 Bad Request on Plain GET (Current)
+**Status:** ✅ Fixed  
+**Cause:** Handler not properly handling non-protocol requests  
+**Fix:** Initialize Socket.IO for all requests, return 200 OK for non-protocol  
+**Commits:** `1c162cb`, `8cec0ce`
 
 ---
 
@@ -36,6 +42,10 @@ Solution: Detect Socket.IO and return early
 Problem 3: Trailing slash causing 308 redirects
     ↓
 Solution: Set addTrailingSlash: false
+    ↓
+Problem 4: Plain GET requests getting 400 errors
+    ↓
+Solution: Initialize Socket.IO for all requests, return 200 for non-protocol
     ↓
 ✅ Socket.IO polling now works perfectly!
 ```
@@ -120,22 +130,28 @@ Browser                      Vercel                Socket.IO
 3. **`pages/api/socket.ts`**
    - Improved logging for debugging
    - Better error handling
+   - Initialize Socket.IO for ALL requests
 
-### Documentation: 8 Files
-1. `SOCKET_IO_400_QUICK_FIX_SUMMARY.md`
-2. `SOCKET_IO_400_VISUAL_FIX_GUIDE.md`
-3. `SOCKET_IO_400_TESTING_CHECKLIST.md`
-4. `SOCKET_IO_400_BAD_REQUEST_FIX.md`
-5. `SOCKET_IO_400_RESOLUTION_SUMMARY.md`
-6. `SOCKET_IO_400_COMPLETE_FIX_REPORT.md`
-7. `SOCKET_IO_400_DOCUMENTATION_INDEX.md`
-8. `SOCKET_IO_308_REDIRECT_FIX.md` ← NEW
+### Documentation: 9 Files
+1. `SOCKET_IO_PLAIN_GET_FIX.md` ← NEW
+2. `SOCKET_IO_ALL_FIXES_COMPLETE.md` (this file)
+3. `SOCKET_IO_308_REDIRECT_FIX.md`
+4. `SOCKET_IO_400_QUICK_FIX_SUMMARY.md`
+5. `SOCKET_IO_400_VISUAL_FIX_GUIDE.md`
+6. `SOCKET_IO_400_TESTING_CHECKLIST.md`
+7. `SOCKET_IO_400_BAD_REQUEST_FIX.md`
+8. `SOCKET_IO_400_RESOLUTION_SUMMARY.md`
+9. `SOCKET_IO_400_COMPLETE_FIX_REPORT.md`
+10. `SOCKET_IO_400_DOCUMENTATION_INDEX.md`
 
 ---
 
 ## Commits Made
 
 ```
+8cec0ce - Add Socket.IO plain GET request fix documentation
+1c162cb - Fix Socket.IO handler to properly initialize for all requests
+5ad2957 - Add comprehensive all Socket.IO fixes summary
 ea4a5f6 - Add Socket.IO 308 redirect fix documentation
 47102dd - Fix Socket.IO 308 redirect - add addTrailingSlash false
 8e791ca - Add Socket.IO 400 documentation index
@@ -270,6 +286,7 @@ Windows: Ctrl + Shift + R
 ✅ **Issue 1 (450):** HTTP polling enabled ✓  
 ✅ **Issue 2 (400):** Polling request detection ✓  
 ✅ **Issue 3 (308):** Trailing slash removal ✓  
+✅ **Issue 4 (400):** Plain GET request handling ✓  
 
 **Result:** Clean, stable Socket.IO polling connections on Vercel!
 
