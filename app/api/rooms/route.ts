@@ -3,6 +3,7 @@ import { Room } from "@/lib/models/Room";
 import { verifyToken, getTokenFromHeader } from "@/lib/utils/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { broadcastToAll } from "@/lib/socketServer";
+import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
 
 export async function GET(request: NextRequest) {
   try {

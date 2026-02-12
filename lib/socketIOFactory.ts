@@ -24,14 +24,30 @@ export function createSocketIOInstance(httpServer: any): any {
   console.log("🔌 Creating new Socket.IO instance");
 
   try {
+    // Get allowed origins - both localhost and production domain
+    const allowedOrigins: string[] = [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "http://192.168.1.11:3000",
+    ];
+
+    // Add production URL if available
+    if (process.env.NEXTAUTH_URL) {
+      allowedOrigins.push(process.env.NEXTAUTH_URL);
+    }
+
+    console.log("🔐 Socket.IO CORS allowed origins:", allowedOrigins);
+
     const io = new Server(httpServer, {
       path: "/api/socket",
       addTrailingSlash: false,
       transports: ["websocket", "polling"],
+      pingInterval: 25000,
+      pingTimeout: 60000,
       cors: {
-        origin: "*",
+        origin: allowedOrigins,
         methods: ["GET", "POST"],
-        credentials: false,
+        credentials: true,
       },
     });
 

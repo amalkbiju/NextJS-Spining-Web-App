@@ -24,6 +24,7 @@ NEXT_PUBLIC_API_URL = https://your-deployment.vercel.app
 ### Step 2: Redeploy
 
 In Vercel Dashboard:
+
 1. Go to **Deployments**
 2. Find the latest failed deployment
 3. Click **3-dot menu** → **Redeploy**
@@ -31,6 +32,7 @@ In Vercel Dashboard:
 ### Step 3: Verify Deployment
 
 Once deployment completes:
+
 - ✅ Visit https://your-deployment.vercel.app
 - ✅ Login page should load
 - ✅ You can spin the wheel at `/game`

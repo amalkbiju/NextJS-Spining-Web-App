@@ -12,8 +12,8 @@ export async function connectDB() {
   if (!MONGODB_URI) {
     throw new Error(
       "MONGODB_URI environment variable is not set. " +
-      "Please add it to your Vercel environment variables. " +
-      "See VERCEL_500_ERROR_FIX.md for instructions."
+        "Please add it to your Vercel environment variables. " +
+        "See VERCEL_500_ERROR_FIX.md for instructions.",
     );
   }
 

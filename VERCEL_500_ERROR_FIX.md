@@ -9,12 +9,14 @@ Your Vercel deployment is getting a **500 Internal Server Error** because `MONGO
 ### Step 1: Get Your MongoDB URI
 
 If you already have MongoDB Atlas:
+
 1. Go to https://cloud.mongodb.com
 2. Click your cluster → **Connect**
-3. Choose **Drivers** 
+3. Choose **Drivers**
 4. Copy the connection string (it looks like: `mongodb+srv://username:password@cluster.mongodb.net/dbname`)
 
 If you DON'T have MongoDB Atlas:
+
 1. Go to https://www.mongodb.com/cloud/atlas (Sign up free)
 2. Create a new project
 3. Create a free cluster
@@ -29,24 +31,28 @@ If you DON'T have MongoDB Atlas:
 5. Add these 4 variables (one by one):
 
 #### Variable 1: MONGODB_URI
+
 - **Key**: `MONGODB_URI`
 - **Value**: `mongodb+srv://username:password@cluster.mongodb.net/dbname` (your actual connection string)
 - **Environments**: Check all (Production, Preview, Development)
 - Click **Save**
 
 #### Variable 2: NEXTAUTH_SECRET
+
 - **Key**: `NEXTAUTH_SECRET`
 - **Value**: Generate one here: https://generate-secret.vercel.app/32
 - **Environments**: Check all
 - Click **Save**
 
 #### Variable 3: NEXTAUTH_URL
+
 - **Key**: `NEXTAUTH_URL`
 - **Value**: `https://next-js-spining-web-app-t8st.vercel.app`
 - **Environments**: Check all (especially Production)
 - Click **Save**
 
 #### Variable 4: NEXT_PUBLIC_API_URL
+
 - **Key**: `NEXT_PUBLIC_API_URL`
 - **Value**: `https://next-js-spining-web-app-t8st.vercel.app`
 - **Environments**: Check all
@@ -85,12 +91,12 @@ If you DON'T have MongoDB Atlas:
 
 ### Common Issues
 
-| Issue | Solution |
-|-------|----------|
-| Invalid MongoDB URI format | Use exact string from MongoDB Atlas |
-| "Connection refused" | Check MongoDB URI has correct password |
-| "Timeout" | MongoDB cluster might be paused (restart it) |
-| "500 error still showing" | Clear browser cache and refresh |
+| Issue                      | Solution                                     |
+| -------------------------- | -------------------------------------------- |
+| Invalid MongoDB URI format | Use exact string from MongoDB Atlas          |
+| "Connection refused"       | Check MongoDB URI has correct password       |
+| "Timeout"                  | MongoDB cluster might be paused (restart it) |
+| "500 error still showing"  | Clear browser cache and refresh              |
 
 ## 🔗 Direct Links
 
@@ -102,6 +108,7 @@ If you DON'T have MongoDB Atlas:
 ## 💡 Pro Tips
 
 1. **Test MongoDB Connection Locally First**
+
    ```bash
    # Add to your .env.local and test locally before deploying
    npm run dev
@@ -119,4 +126,3 @@ If you DON'T have MongoDB Atlas:
 
 **Status**: 🔴 Waiting for environment variables
 **Action**: Add environment variables → Redeploy → Done!
-

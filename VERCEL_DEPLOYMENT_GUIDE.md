@@ -11,12 +11,12 @@ Your Spin & Win app requires environment variables to work on Vercel. Follow the
 3. Click **Settings** → **Environment Variables**
 4. Add the following variables:
 
-| Variable | Value | Example |
-|----------|-------|---------|
-| `MONGODB_URI` | Your MongoDB connection string | `mongodb+srv://username:password@cluster.mongodb.net/dbname` |
-| `NEXTAUTH_SECRET` | A secret key for authentication | `your-random-secret-key-here` |
-| `NEXTAUTH_URL` | Your production URL | `https://your-app.vercel.app` |
-| `NEXT_PUBLIC_API_URL` | Your production API URL | `https://your-app.vercel.app` |
+| Variable              | Value                           | Example                                                      |
+| --------------------- | ------------------------------- | ------------------------------------------------------------ |
+| `MONGODB_URI`         | Your MongoDB connection string  | `mongodb+srv://username:password@cluster.mongodb.net/dbname` |
+| `NEXTAUTH_SECRET`     | A secret key for authentication | `your-random-secret-key-here`                                |
+| `NEXTAUTH_URL`        | Your production URL             | `https://your-app.vercel.app`                                |
+| `NEXT_PUBLIC_API_URL` | Your production API URL         | `https://your-app.vercel.app`                                |
 
 ### Step 2: MongoDB Connection String
 
@@ -53,6 +53,7 @@ After adding environment variables:
 ## ✅ Verification
 
 After deployment, your app should be live at:
+
 - **Production URL**: https://your-app.vercel.app
 - **Login Page**: https://your-app.vercel.app/login
 - **Game Page**: https://your-app.vercel.app/game (after login)
@@ -77,6 +78,7 @@ After deployment, your app should be live at:
 ### Socket.IO Connection Issues
 
 Make sure:
+
 - Your production domain is in `NEXTAUTH_URL`
 - CORS is properly configured in your API
 - WebSocket connections are enabled on Vercel (they are by default)
