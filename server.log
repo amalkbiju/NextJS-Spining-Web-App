@@ -1,0 +1,19 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+⚠ Invalid next.config.ts options detected: 
+⚠     Unrecognized key(s) in object: 'serverComponentsExternalPackages' at "experimental"
+⚠     Unrecognized key(s) in object: 'swcMinify'
+⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+⚠ `experimental.serverComponentsExternalPackages` has been moved to `serverExternalPackages`. Please update your next.config.ts file accordingly.
+▲ Next.js 16.1.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.7:3000
+- Environments: .env.local
+- Experiments (use with caution):
+  ? serverComponentsExternalPackages (invalid experimental key)
+
+✓ Starting...
+✓ Ready in 524ms
+ GET /login 200 in 427ms (compile: 313ms, render: 114ms)
