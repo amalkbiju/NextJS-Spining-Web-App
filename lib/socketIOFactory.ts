@@ -41,9 +41,10 @@ export function createSocketIOInstance(httpServer: any): any {
     const io = new Server(httpServer, {
       path: "/api/socket",
       addTrailingSlash: false,
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"], // Polling first (more reliable on Vercel)
       pingInterval: 25000,
       pingTimeout: 60000,
+      maxHttpBufferSize: 1e6, // 1 MB
       cors: {
         origin: allowedOrigins,
         methods: ["GET", "POST"],

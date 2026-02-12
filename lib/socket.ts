@@ -28,13 +28,14 @@ export function initSocket(userId?: string): Socket {
 
   socket = io(socketUrl, {
     path: "/api/socket",
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"], // Try polling first on production
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: 10, // Increased attempts
     reconnectionDelayMax: 5000,
     forceNew: false,
     multiplex: true,
+    upgrade: true, // Allow upgrade from polling to websocket
   });
 
   // Connection events
@@ -60,6 +61,15 @@ export function initSocket(userId?: string): Socket {
 
   socket.on("connect_error", (error: any) => {
     console.error("❌ Socket.IO connection error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      type: error.type,
+    });
+  });
+
+  socket.on("error", (error: any) => {
+    console.error("❌ Socket.IO error:", error);
   });
 
   return socket;

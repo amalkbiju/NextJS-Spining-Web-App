@@ -19,11 +19,27 @@ export default function handler(req: SocketRequest, res: SocketResponse) {
   try {
     console.log("📍 Pages API socket handler called - Method:", req.method);
 
+    // Ensure Socket.IO instance exists
+    const httpServer = res.socket?.server;
+    
+    if (!httpServer) {
+      console.error("❌ HTTP server not available on res.socket.server");
+      if (req.method === "GET") {
+        return res.status(500).json({ 
+          success: false, 
+          error: "Server not initialized" 
+        });
+      }
+      return res.status(500).end();
+    }
+
     // Get or create Socket.IO instance
-    const io = getOrCreateSocketIO(res.socket.server);
+    const io = getOrCreateSocketIO(httpServer);
 
     // Always store in global for access from other routes
     setGlobalIO(io);
+
+    console.log("✅ Socket.IO instance ready, ID:", io?.engine?.id);
 
     // For regular HTTP requests (like from /api/init), return JSON
     if (req.method === "GET") {
@@ -32,8 +48,10 @@ export default function handler(req: SocketRequest, res: SocketResponse) {
         .json({ success: true, message: "Socket.IO ready" });
     }
 
-    // For other methods, end response
-    res.end();
+    // For WebSocket upgrade requests, don't end the response
+    // Socket.IO will handle the upgrade
+    console.log("📡 Allowing Socket.IO to handle upgrade request");
+    // Don't call res.end() - let Socket.IO handle it
   } catch (error: any) {
     console.error("❌ Socket handler error:", error.message);
     if (req.method === "GET") {
