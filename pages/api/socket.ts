@@ -23,6 +23,7 @@ export default function handler(req: SocketRequest, res: SocketResponse) {
     
     console.log("📍 Pages API socket handler called");
     console.log("   Method:", req.method);
+    console.log("   Path:", req.url);
     console.log("   Query:", req.query);
     console.log("   Is Socket.IO request:", !!isSocketIORequest);
 

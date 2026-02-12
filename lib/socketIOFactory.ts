@@ -40,6 +40,7 @@ export function createSocketIOInstance(httpServer: any): any {
 
     const io = new Server(httpServer, {
       path: "/api/socket",
+      addTrailingSlash: false, // ← FIX: Don't add trailing slash (prevents Vercel redirect)
       transports: ["polling", "websocket"], // Polling first (more reliable on Vercel)
       pingInterval: 25000,
       pingTimeout: 60000,
