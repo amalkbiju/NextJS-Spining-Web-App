@@ -17,20 +17,24 @@ interface SocketResponse extends NextApiResponse {
 
 export default function handler(req: SocketRequest, res: SocketResponse) {
   try {
-    console.log("📍 Pages API socket handler called - Method:", req.method);
+    // Check if this is a Socket.IO polling/websocket request
+    // Socket.IO requests will have 'transport' or 'EIO' query parameters
+    const isSocketIORequest = req.query.transport || req.query.EIO;
+    
+    console.log("📍 Pages API socket handler called");
+    console.log("   Method:", req.method);
+    console.log("   Query:", req.query);
+    console.log("   Is Socket.IO request:", !!isSocketIORequest);
 
     // Ensure Socket.IO instance exists
     const httpServer = res.socket?.server;
     
     if (!httpServer) {
       console.error("❌ HTTP server not available on res.socket.server");
-      if (req.method === "GET") {
-        return res.status(500).json({ 
-          success: false, 
-          error: "Server not initialized" 
-        });
-      }
-      return res.status(500).end();
+      return res.status(500).json({ 
+        success: false, 
+        error: "Server not initialized" 
+      });
     }
 
     // Get or create Socket.IO instance
@@ -39,24 +43,23 @@ export default function handler(req: SocketRequest, res: SocketResponse) {
     // Always store in global for access from other routes
     setGlobalIO(io);
 
-    console.log("✅ Socket.IO instance ready, ID:", io?.engine?.id);
+    console.log("✅ Socket.IO instance ready");
 
-    // For regular HTTP requests (like from /api/init), return JSON
-    if (req.method === "GET") {
-      return res
-        .status(200)
-        .json({ success: true, message: "Socket.IO ready" });
+    // If this is a Socket.IO request, let Socket.IO handle it
+    // Don't send any response - Socket.IO engine will handle it
+    if (isSocketIORequest) {
+      console.log("📡 Socket.IO polling/upgrade request - letting Socket.IO engine handle");
+      // IMPORTANT: Don't call res.end() or send any response
+      // Socket.IO needs to handle the response through its engine
+      return;
     }
 
-    // For WebSocket upgrade requests, don't end the response
-    // Socket.IO will handle the upgrade
-    console.log("📡 Allowing Socket.IO to handle upgrade request");
-    // Don't call res.end() - let Socket.IO handle it
+    // For other requests, return JSON status
+    return res.status(200).json({ success: true, message: "Socket.IO endpoint ready" });
+    
   } catch (error: any) {
     console.error("❌ Socket handler error:", error.message);
-    if (req.method === "GET") {
-      return res.status(500).json({ success: false, error: error.message });
-    }
-    res.status(500).end();
+    console.error("Stack:", error.stack);
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
