@@ -10,7 +10,11 @@ export async function connectDB() {
   const MONGODB_URI = process.env.MONGODB_URI;
 
   if (!MONGODB_URI) {
-    throw new Error("Please define the MONGODB_URI environment variable");
+    throw new Error(
+      "MONGODB_URI environment variable is not set. " +
+      "Please add it to your Vercel environment variables. " +
+      "See VERCEL_500_ERROR_FIX.md for instructions."
+    );
   }
 
   if (cached.conn) {
@@ -25,11 +29,11 @@ export async function connectDB() {
     cached.promise = mongoose
       .connect(MONGODB_URI, opts)
       .then((mongoose) => {
-        console.log("MongoDB connected successfully");
+        console.log("✅ MongoDB connected successfully");
         return mongoose;
       })
       .catch((err) => {
-        console.error("MongoDB connection error:", err);
+        console.error("❌ MongoDB connection error:", err);
         throw err;
       });
   }
