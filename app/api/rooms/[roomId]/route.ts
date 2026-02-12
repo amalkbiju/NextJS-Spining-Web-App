@@ -4,6 +4,7 @@ import { User } from "@/lib/models/User";
 import { verifyToken, getTokenFromHeader } from "@/lib/utils/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { emitToUser } from "@/lib/socketServer";
+import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
 
 export async function GET(
   request: NextRequest,
@@ -116,6 +117,17 @@ export async function PUT(
         { success: false, message: "Room not found" },
         { status: 404 },
       );
+    }
+
+    // Ensure Socket.IO is initialized before emitting events
+    try {
+      const httpServer = (request as any)?.socket?.server;
+      if (httpServer) {
+        getOrCreateSocketIO(httpServer);
+        console.log("✅ Socket.IO initialized for room join events");
+      }
+    } catch (err) {
+      console.warn("⚠️ Could not initialize Socket.IO from request");
     }
 
     // Emit socket event to the invited user

@@ -5,6 +5,7 @@ import { verifyToken, getTokenFromHeader } from "@/lib/utils/jwt";
 import { sendInvitationEmail } from "@/lib/utils/email";
 import { NextRequest, NextResponse } from "next/server";
 import { emitToUser } from "@/lib/socketServer";
+import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
 
 export async function POST(
   request: NextRequest,
@@ -81,6 +82,17 @@ export async function POST(
 
     // Send email invitation
     await sendInvitationEmail(email.toLowerCase(), room.creatorName, roomId);
+
+    // Ensure Socket.IO is initialized before emitting events
+    try {
+      const httpServer = (request as any)?.socket?.server;
+      if (httpServer) {
+        getOrCreateSocketIO(httpServer);
+        console.log("✅ Socket.IO initialized for invite events");
+      }
+    } catch (err) {
+      console.warn("⚠️ Could not initialize Socket.IO from request");
+    }
 
     // Emit socket event to notify the invited user in real-time
     try {
