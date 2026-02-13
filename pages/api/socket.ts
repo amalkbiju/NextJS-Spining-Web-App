@@ -15,33 +15,36 @@ interface SocketResponse extends NextApiResponse {
   };
 }
 
-// Socket.IO Handler - MUST return 200 OK for all requests
+// Socket.IO Handler - handles both GET and POST requests
 export default function handler(req: SocketRequest, res: SocketResponse) {
+  const httpServer = res.socket?.server;
+  
+  if (!httpServer) {
+    console.log("[Socket] No HTTP server");
+    return res.status(500).json({ error: "Server not available" });
+  }
+
   try {
-    const httpServer = res.socket?.server;
-    if (!httpServer) {
-      return res.status(500).json({ error: "Server not available" });
-    }
+    // CRITICAL: Initialize Socket.IO
+    const io = getOrCreateSocketIO(httpServer);
+    setGlobalIO(io);
 
-    // Initialize Socket.IO on every request
-    try {
-      const io = getOrCreateSocketIO(httpServer);
-      setGlobalIO(io);
-    } catch (err) {
-      console.log("Socket.IO init issue:", err);
-    }
+    // Check if this is a Socket.IO protocol request
+    const isSocketIOProtocol = req.query.transport || req.query.EIO;
 
-    // Check for Socket.IO protocol parameters
-    if (req.query.transport || req.query.EIO) {
-      // Let Socket.IO engine handle it
+    if (isSocketIOProtocol) {
+      // For Socket.IO protocol requests (GET or POST), let the engine handle it
+      // Don't send any response body - Socket.IO engine will respond
+      console.log(`[Socket] ${req.method} protocol request`);
       return;
     }
 
-    // Plain request - return 200 OK
-    return res.status(200).json({ status: "ok" });
+    // Non-protocol request - return 200 OK
+    console.log(`[Socket] ${req.method} plain request`);
+    return res.status(200).json({ status: "ok", ready: true });
 
   } catch (error) {
-    console.log("Socket error:", error);
+    console.log("[Socket] Handler error:", error);
     return res.status(500).json({ error: "Internal error" });
   }
 }
