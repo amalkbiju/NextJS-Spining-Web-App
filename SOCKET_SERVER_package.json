@@ -1,0 +1,23 @@
+{
+  "name": "socket-server",
+  "version": "1.0.0",
+  "description": "Standalone Socket.IO server for Spinning Web App - Deploy to Railway/Render",
+  "main": "SOCKET_SERVER.js",
+  "scripts": {
+    "start": "node SOCKET_SERVER.js",
+    "dev": "NODE_ENV=development node SOCKET_SERVER.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.8.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3"
+  },
+  "engines": {
+    "node": "18.x",
+    "npm": "9.x"
+  },
+  "keywords": ["socket.io", "vercel", "railway", "websocket"],
+  "author": "Your Name",
+  "license": "MIT"
+}

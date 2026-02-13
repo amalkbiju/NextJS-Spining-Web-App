@@ -3,6 +3,50 @@ import { io, Socket } from "socket.io-client";
 let socket: Socket | null = null;
 
 /**
+ * Get the correct Socket.IO server URL based on environment
+ *
+ * For Vercel/Production:
+ * - Must use an external Socket.IO server (e.g., Railway.app, Render, etc.)
+ * - Set NEXT_PUBLIC_SOCKET_URL environment variable
+ *
+ * For Local Development:
+ * - Connects to localhost:3000
+ */
+function getSocketUrl(): string {
+  // In browser environment
+  if (typeof window !== "undefined") {
+    // Production: Use external Socket.IO server URL
+    if (process.env.NEXT_PUBLIC_SOCKET_URL) {
+      console.log(
+        `📡 Using external Socket.IO server: ${process.env.NEXT_PUBLIC_SOCKET_URL}`,
+      );
+      return process.env.NEXT_PUBLIC_SOCKET_URL;
+    }
+
+    // Development: Check if connecting to custom server.js (port 3000)
+    const currentUrl = `${window.location.protocol}//${window.location.host}`;
+
+    // If on Vercel production domain, must use external server
+    if (window.location.hostname.includes("vercel.app")) {
+      console.error(
+        "❌ NEXT_PUBLIC_SOCKET_URL not set. Socket.IO will not work on Vercel.",
+      );
+      console.error(
+        "Please set NEXT_PUBLIC_SOCKET_URL to your Socket.IO server URL",
+      );
+      throw new Error("Socket.IO server URL not configured for production");
+    }
+
+    // Local development
+    console.log(`📡 Connecting to local server: ${currentUrl}`);
+    return currentUrl;
+  }
+
+  // Server-side fallback
+  return "http://localhost:3000";
+}
+
+/**
  * Initialize Socket.IO connection
  * @param userId - The user's unique identifier
  * @returns Socket instance
@@ -32,28 +76,23 @@ export function initSocket(userId?: string): Socket {
 
   console.log("🔌 Initializing Socket.IO client...");
 
-  // Create new socket connection
-  // Get the correct URL for the environment
-  let socketUrl = "http://localhost:3000";
-
-  if (typeof window !== "undefined") {
-    // Client-side: use the current window location
-    socketUrl = `${window.location.protocol}//${window.location.host}`;
-    console.log(`📡 Connecting to: ${socketUrl}`);
-  }
+  // Get the correct Socket.IO server URL
+  let socketUrl = getSocketUrl();
 
   socket = io(socketUrl, {
-    path: "/api/socket",
+    // For external servers, use default path
+    path: socketUrl.includes("localhost") ? "/api/socket" : "/socket.io/",
     addTrailingSlash: false,
-    transports: ["polling"], // Use polling for Next.js Pages API compatibility
+    // Try WebSocket first, fallback to polling
+    transports: ["websocket", "polling"],
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionAttempts: 20, // Increased attempts for better resilience
+    reconnectionAttempts: 50, // Increased for production resilience
     reconnectionDelayMax: 5000,
     forceNew: false,
     multiplex: true,
     randomizationFactor: 0.5,
-    timeout: 10000, // Reduced timeout for faster failure detection
+    timeout: 20000,
     withCredentials: false,
     extraHeaders: {
       "X-Client-Version": "socket.io-client/4.8.3",
