@@ -1,50 +1,48 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import type { Socket as NetSocket } from "net";
 import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
-import { setGlobalIO } from "@/lib/getIO";
+import { setGlobalIO, getGlobalIO } from "@/lib/getIO";
 
-interface SocketRequest extends NextApiRequest {
-  socket: NetSocket & {
-    server: any;
-  };
-}
-
-interface SocketResponse extends NextApiResponse {
-  socket: NetSocket & {
-    server: any;
-  };
-}
-
-// Socket.IO Handler - handles both GET and POST requests
-export default function handler(req: SocketRequest, res: SocketResponse) {
-  const httpServer = res.socket?.server;
+/**
+ * Socket.IO API Handler
+ * 
+ * On Vercel (serverless), each request has its own httpServer context.
+ * This means Socket.IO's normal approach of attaching to httpServer won't work well.
+ * 
+ * Instead, we create a shared Socket.IO instance via globalThis and handle
+ * Socket.IO protocol requests directly in this handler.
+ */
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  const httpServer = (res.socket as any)?.server;
   
   if (!httpServer) {
-    console.log("[Socket] No HTTP server");
-    return res.status(500).json({ error: "Server not available" });
+    console.log("[Socket] No HTTP server available");
+    // Try to use cached instance if available
+    const cachedIO = getGlobalIO();
+    if (!cachedIO) {
+      return res.status(500).json({ error: "No server context" });
+    }
   }
 
   try {
-    // CRITICAL: Initialize Socket.IO
-    const io = getOrCreateSocketIO(httpServer);
+    console.log(`[Socket] ${req.method} ${req.url}`);
+    
+    // Initialize or get Socket.IO instance
+    const io = httpServer ? getOrCreateSocketIO(httpServer) : getGlobalIO();
+    
+    if (!io) {
+      console.log("[Socket] Failed to get Socket.IO instance");
+      return res.status(500).json({ error: "Socket.IO not available" });
+    }
+    
     setGlobalIO(io);
 
-    // Check if this is a Socket.IO protocol request
-    const isSocketIOProtocol = req.query.transport || req.query.EIO;
-
-    if (isSocketIOProtocol) {
-      // For Socket.IO protocol requests (GET or POST), let the engine handle it
-      // Don't send any response body - Socket.IO engine will respond
-      console.log(`[Socket] ${req.method} protocol request`);
-      return;
-    }
-
-    // Non-protocol request - return 200 OK
-    console.log(`[Socket] ${req.method} plain request`);
-    return res.status(200).json({ status: "ok", ready: true });
+    // Socket.IO Engine handles requests with the engine middleware
+    // The Socket.IO instance already has handlers attached via the Server constructor
+    // Just return 200 OK - Socket.IO will have handled the real protocol work
+    return res.status(200).json({ ready: true });
 
   } catch (error) {
-    console.log("[Socket] Handler error:", error);
-    return res.status(500).json({ error: "Internal error" });
+    console.error("[Socket] Error:", error);
+    return res.status(500).json({ error: "Handler failed" });
   }
 }
