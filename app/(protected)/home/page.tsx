@@ -96,19 +96,27 @@ export default function HomePage() {
       console.log("🎮 Home page received 'room-created' event:", data);
       if (data.creatorId !== user?.userId) {
         console.log(`✓ New room available from ${data.creatorName}`);
-        setRooms((prev) => [
-          {
-            roomId: data.roomId,
-            creatorId: data.creatorId,
-            creatorName: data.creatorName,
-            creatorEmail: data.creatorEmail,
-            status: data.status,
-            oppositeUserId: null,
-            oppositeUserName: null,
-            oppositeUserEmail: null,
-          } as Room,
-          ...prev,
-        ]);
+        setRooms((prev) => {
+          // Check if room already exists to avoid duplicates
+          const roomExists = prev.some((room) => room.roomId === data.roomId);
+          if (roomExists) {
+            console.log(`⚠️  Room ${data.roomId} already exists, skipping duplicate`);
+            return prev;
+          }
+          return [
+            {
+              roomId: data.roomId,
+              creatorId: data.creatorId,
+              creatorName: data.creatorName,
+              creatorEmail: data.creatorEmail,
+              status: data.status,
+              oppositeUserId: null,
+              oppositeUserName: null,
+              oppositeUserEmail: null,
+            } as Room,
+            ...prev,
+          ];
+        });
       }
     };
 
@@ -135,9 +143,19 @@ export default function HomePage() {
       const response = await axios.get("/api/rooms", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const roomList = response.data.rooms || [];
-      setRooms(roomList);
-      setFilteredRooms(roomList);
+      let roomList = response.data.rooms || [];
+      
+      // Deduplicate rooms by roomId to avoid duplicate key errors
+      const uniqueRoomsMap = new Map<string, Room>();
+      roomList.forEach((room: Room) => {
+        if (!uniqueRoomsMap.has(room.roomId)) {
+          uniqueRoomsMap.set(room.roomId, room);
+        }
+      });
+      const uniqueRooms = Array.from(uniqueRoomsMap.values());
+      
+      setRooms(uniqueRooms);
+      setFilteredRooms(uniqueRooms);
     } catch (err: any) {
       setError("Failed to fetch rooms");
     } finally {
