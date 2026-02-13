@@ -14,8 +14,12 @@ export const config = {
  * Handles all Socket.IO protocol requests and connects clients
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log(`[Socket] ${req.method} ${req.url}`, {
-    query: req.url?.split("?")[1],
+  // Log the full request details
+  console.log(`[Socket] ${req.method} ${req.url}`);
+  console.log("[Socket] Query params:", req.query);
+  console.log("[Socket] Headers:", {
+    upgrade: req.headers.upgrade,
+    connection: req.headers.connection,
   });
 
   try {
@@ -42,29 +46,32 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       console.log("[Socket] Reusing existing Socket.IO instance");
     }
 
-    // Handle the Socket.IO request via the engine
-    if (io && io.engine) {
-      console.log("[Socket] Passing request to Socket.IO engine");
-      try {
-        // Socket.IO engine will handle HTTP long-polling and WebSocket upgrade
-        io.engine.handleRequest(req, res);
-        console.log("[Socket] Request handled by Socket.IO engine");
-      } catch (engineError) {
-        console.error("[Socket] Socket.IO engine error:", engineError);
-        if (!res.headersSent) {
-          return res.status(500).json({ error: "Engine error" });
-        }
-      }
-    } else {
-      console.error("[Socket] Socket.IO engine not available");
+    // Verify Socket.IO instance has an engine
+    if (!io || !io.engine) {
+      console.error("[Socket] Socket.IO engine not ready");
       if (!res.headersSent) {
         return res.status(503).json({ error: "Socket.IO not ready" });
+      }
+      return;
+    }
+
+    // Log before delegating to engine
+    console.log("[Socket] Delegating to Socket.IO engine");
+
+    // Let Socket.IO engine handle the request
+    // This handles HTTP long-polling and WebSocket upgrades
+    try {
+      io.engine.handleRequest(req, res);
+    } catch (engineError) {
+      console.error("[Socket] Engine error:", engineError);
+      if (!res.headersSent) {
+        return res.status(500).json({ error: "Engine error" });
       }
     }
   } catch (error) {
     console.error("[Socket] Handler error:", error);
     if (!res.headersSent) {
-      res.status(500).json({ error: "Internal error" });
+      return res.status(500).json({ error: "Internal error" });
     }
   }
 }

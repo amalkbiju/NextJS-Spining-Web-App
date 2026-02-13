@@ -39,7 +39,7 @@ export function createSocketIOInstance(httpServer: any): any {
     const io = new Server(httpServer, {
       path: "/api/socket",
       addTrailingSlash: false,
-      transports: ["polling", "websocket"],
+      transports: ["websocket", "polling"], // Try websocket first, fallback to polling
       pingInterval: 25000,
       pingTimeout: 60000,
       maxHttpBufferSize: 1e6,
