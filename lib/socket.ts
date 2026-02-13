@@ -43,7 +43,7 @@ export function initSocket(userId?: string): Socket {
   socket = io(socketUrl, {
     path: "/api/socket",
     addTrailingSlash: false, // ← FIX: Prevent trailing slash that causes Vercel redirect
-    transports: ["polling", "websocket"], // Start with polling, upgrade to websocket
+    transports: ["websocket", "polling"], // Try WebSocket first, fallback to polling
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 15, // Increased attempts for Vercel

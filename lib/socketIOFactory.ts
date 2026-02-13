@@ -40,8 +40,8 @@ export function createSocketIOInstance(httpServer: any): any {
       path: "/api/socket",
       addTrailingSlash: false,
       transports: ["websocket", "polling"], // Try websocket first, fallback to polling
-      pingInterval: 25000,
-      pingTimeout: 60000,
+      pingInterval: 15000, // Send ping every 15 seconds to keep connection alive
+      pingTimeout: 30000, // Wait 30 seconds for pong before closing
       maxHttpBufferSize: 1e6,
       allowEIO3: true,
       cors: corsConfig,
@@ -49,6 +49,11 @@ export function createSocketIOInstance(httpServer: any): any {
       serveClient: false, // Don't serve Socket.IO client library
       connectTimeout: 45000,
       upgradeTimeout: 10000,
+      // Prevent idle disconnects
+      allowUpgrades: true,
+      perMessageDeflate: {
+        threshold: 2048,
+      },
     });
 
     console.log("📡 Socket.IO server initialized with options");
@@ -77,6 +82,12 @@ export function createSocketIOInstance(httpServer: any): any {
         );
 
         socket.emit("joined-user-room", { userId, socketId: socket.id });
+      });
+
+      // Handle keep-alive ping
+      socket.on("ping", () => {
+        console.log("🔔 Received keep-alive ping from client");
+        socket.emit("pong");
       });
 
       socket.on("disconnect", () => {

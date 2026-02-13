@@ -54,8 +54,18 @@ export default function ProtectedLayout({
         console.log(`📨 Socket event received: ${eventName}`);
       });
 
+      // Add custom keep-alive ping mechanism
+      // This sends a regular ping to keep the connection alive
+      const pingInterval = setInterval(() => {
+        if (socket.connected) {
+          socket.emit("ping");
+          console.log("🔔 Sent keep-alive ping");
+        }
+      }, 20000); // Every 20 seconds
+
       // Cleanup on unmount
       return () => {
+        clearInterval(pingInterval);
         socket.off("connect", handleConnect);
         socket.off("disconnect", handleDisconnect);
         socket.offAny();
