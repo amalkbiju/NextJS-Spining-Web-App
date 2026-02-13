@@ -31,9 +31,10 @@ export function createSocketIOInstance(httpServer: any): any {
       origin: "*", // Allow all origins - Socket.IO will validate connections
       methods: ["GET", "POST"],
       credentials: false, // Set to false when allowing *
+      allowEIO3: true,
     };
 
-    console.log("🔐 Socket.IO CORS config:", corsConfig);
+    console.log("🔐 Socket.IO CORS config:", JSON.stringify(corsConfig));
 
     const io = new Server(httpServer, {
       path: "/api/socket",
@@ -44,8 +45,15 @@ export function createSocketIOInstance(httpServer: any): any {
       maxHttpBufferSize: 1e6,
       allowEIO3: true,
       cors: corsConfig,
+      // Production optimizations for Vercel
+      serveClient: false, // Don't serve Socket.IO client library
+      connectTimeout: 45000,
+      upgradeTimeout: 10000,
     });
 
+    console.log("📡 Socket.IO server initialized with options");
+
+    // Connection handler
     io.on("connection", (socket) => {
       console.log("👤 User connected with socket ID:", socket.id);
 
@@ -75,11 +83,21 @@ export function createSocketIOInstance(httpServer: any): any {
           }
         }
       });
+
+      // Error handling
+      socket.on("error", (error) => {
+        console.error("❌ Socket error:", error);
+      });
+    });
+
+    // Error handling for the server
+    io.on("error", (error) => {
+      console.error("❌ Socket.IO server error:", error);
     });
 
     ioInstance = io;
     setGlobalIO(io);
-    console.log("✅ Socket.IO instance created and stored");
+    console.log("✅ Socket.IO instance created and stored globally");
 
     return io;
   } catch (error) {
@@ -92,17 +110,17 @@ export function createSocketIOInstance(httpServer: any): any {
  * Get or create Socket.IO instance
  */
 export function getOrCreateSocketIO(httpServer: any): any {
-  // CRITICAL: On Vercel, always try to create/attach to the current httpServer
-  // even if we have a cached instance, because each request might get a different server
+  if (!httpServer) {
+    console.error("❌ httpServer is required");
+    throw new Error("httpServer is required to initialize Socket.IO");
+  }
+
   if (ioInstance) {
-    // Check if this is a different httpServer context (Vercel case)
-    // If so, we might need to re-attach
-    // But for now, return the cached instance
     console.log("[SocketIO] Returning cached instance");
     return ioInstance;
   }
 
-  console.log("[SocketIO] Creating new instance");
+  console.log("[SocketIO] Creating new instance from httpServer");
   return createSocketIOInstance(httpServer);
 }
 
@@ -114,3 +132,4 @@ export function getSocketIO(): any {
 }
 
 export { userSockets };
+
