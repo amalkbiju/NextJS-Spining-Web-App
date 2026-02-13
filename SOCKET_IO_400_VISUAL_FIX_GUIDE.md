@@ -111,19 +111,20 @@
 ### File 1: pages/api/socket.ts
 
 #### BEFORE ❌
+
 ```typescript
 export default function handler(req: SocketRequest, res: SocketResponse) {
   try {
     const io = getOrCreateSocketIO(res.socket?.server);
-    
+
     // ❌ WRONG: Treating all GET requests the same
     if (req.method === "GET") {
-      return res.status(200).json({ 
-        success: true, 
-        message: "Socket.IO ready" 
+      return res.status(200).json({
+        success: true,
+        message: "Socket.IO ready",
       });
     }
-    
+
     // This doesn't work for Socket.IO polling!
   } catch (error: any) {
     res.status(500).end();
@@ -132,28 +133,29 @@ export default function handler(req: SocketRequest, res: SocketResponse) {
 ```
 
 #### AFTER ✅
+
 ```typescript
 export default function handler(req: SocketRequest, res: SocketResponse) {
   try {
     // ✅ CORRECT: Detect Socket.IO requests
     const isSocketIORequest = req.query.transport || req.query.EIO;
-    
+
     const io = getOrCreateSocketIO(res.socket?.server);
-    
+
     if (isSocketIORequest) {
       // ✅ Return immediately - let Socket.IO engine handle it
       return;
     }
-    
+
     // For non-Socket.IO requests
-    return res.status(200).json({ 
-      success: true, 
-      message: "Socket.IO endpoint ready" 
+    return res.status(200).json({
+      success: true,
+      message: "Socket.IO endpoint ready",
     });
   } catch (error: any) {
-    return res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    return res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 }
@@ -162,6 +164,7 @@ export default function handler(req: SocketRequest, res: SocketResponse) {
 ### File 2: lib/socketIOFactory.ts
 
 #### BEFORE ❌
+
 ```typescript
 const io = new Server(httpServer, {
   path: "/api/socket",
@@ -175,6 +178,7 @@ const io = new Server(httpServer, {
 ```
 
 #### AFTER ✅
+
 ```typescript
 const io = new Server(httpServer, {
   path: "/api/socket",
@@ -218,17 +222,18 @@ const io = new Server(httpServer, {
 
 ## Key Difference
 
-| Aspect | Before (❌ 400 Error) | After (✅ Working) |
-|--------|---------------------|------------------|
-| Handler behavior | Send JSON response | Return immediately |
-| Socket.IO handling | Confused by JSON | Handles full protocol |
-| Response type | `application/json` | Binary/Socket.IO protocol |
-| Status code | 400 Bad Request | 200 OK |
-| Client behavior | Error → retry | Connected → polling |
+| Aspect             | Before (❌ 400 Error) | After (✅ Working)        |
+| ------------------ | --------------------- | ------------------------- |
+| Handler behavior   | Send JSON response    | Return immediately        |
+| Socket.IO handling | Confused by JSON      | Handles full protocol     |
+| Response type      | `application/json`    | Binary/Socket.IO protocol |
+| Status code        | 400 Bad Request       | 200 OK                    |
+| Client behavior    | Error → retry         | Connected → polling       |
 
 ## Request/Response Example
 
 ### Before Fix - Request/Response ❌
+
 ```http
 GET /api/socket?EIO=4&transport=polling&sid=... HTTP/1.1
 
@@ -241,6 +246,7 @@ Result: 400 Bad Request displayed
 ```
 
 ### After Fix - Request/Response ✅
+
 ```http
 GET /api/socket?EIO=4&transport=polling&sid=... HTTP/1.1
 

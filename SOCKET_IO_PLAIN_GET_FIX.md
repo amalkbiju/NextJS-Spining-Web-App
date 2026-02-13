@@ -3,6 +3,7 @@
 ## Issue Discovered
 
 **New Error:** Socket.IO receiving **400 Bad Request** on plain GET request
+
 - Request URL: `/api/socket` (no query parameters)
 - Referer: Login page
 - Method: GET
@@ -27,6 +28,7 @@ Socket.IO client thinks server is down/broken
 ### Updated Handler Logic
 
 **Key Improvement:**
+
 ```typescript
 // Initialize Socket.IO for EVERY request
 const httpServer = res.socket?.server;
@@ -41,13 +43,14 @@ if (isSocketIORequest) {
 }
 
 // For ALL other requests (including plain GETs):
-return res.status(200).json({ 
+return res.status(200).json({
   status: "ok",
-  message: "Socket.IO server is running"
+  message: "Socket.IO server is running",
 });
 ```
 
 **Why This Works:**
+
 1. Socket.IO is initialized for all requests to the endpoint
 2. Only actual Socket.IO protocol requests are passed to the engine
 3. All other requests (health checks, plain GETs) get 200 OK response
@@ -55,12 +58,12 @@ return res.status(200).json({
 
 ## What Changed
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Plain GET to `/api/socket` | 400 Bad Request ❌ | 200 OK ✅ |
-| Socket.IO protocol requests | Handled | Handled |
-| Server initialization | Early | Every request |
-| Response for non-protocol | JSON error | JSON status |
+| Aspect                      | Before             | After         |
+| --------------------------- | ------------------ | ------------- |
+| Plain GET to `/api/socket`  | 400 Bad Request ❌ | 200 OK ✅     |
+| Socket.IO protocol requests | Handled            | Handled       |
+| Server initialization       | Early              | Every request |
+| Response for non-protocol   | JSON error         | JSON status   |
 
 ## Commit
 
@@ -71,6 +74,7 @@ return res.status(200).json({
 ## Why This Matters
 
 Plain GET requests to `/api/socket` can come from:
+
 1. **Browser health checks** - to verify endpoint is alive
 2. **Load balancers** - to check if service is up
 3. **Socket.IO client initialization** - initial probe
@@ -81,6 +85,7 @@ All of these should return **200 OK**, not 400 errors.
 ## Testing Instructions
 
 ### Quick Test
+
 ```bash
 # 1. Curl the endpoint directly
 curl -v https://next-js-spining-web-app.vercel.app/api/socket
@@ -91,11 +96,12 @@ curl -v https://next-js-spining-web-app.vercel.app/api/socket
 ```
 
 ### Browser Test
+
 ```javascript
 // In browser console:
-fetch('https://next-js-spining-web-app.vercel.app/api/socket')
-  .then(r => r.json())
-  .then(data => console.log(data))
+fetch("https://next-js-spining-web-app.vercel.app/api/socket")
+  .then((r) => r.json())
+  .then((data) => console.log(data));
 
 // Expected output:
 // {status: "ok", message: "Socket.IO server is running"}
@@ -118,7 +124,7 @@ Status: 101 Switching (upgrades to WebSocket) ✅
 
 ✅ Compiled successfully in 1596.5ms  
 ✅ No errors or warnings  
-✅ Ready for production  
+✅ Ready for production
 
 ## Next Steps
 

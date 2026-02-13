@@ -3,6 +3,7 @@
 ## Your MongoDB Connection String
 
 Use this exact connection string:
+
 ```
 mongodb+srv://Amal:Amal@cluster0.c1reif0.mongodb.net/
 ```
@@ -12,11 +13,13 @@ mongodb+srv://Amal:Amal@cluster0.c1reif0.mongodb.net/
 ## 🚀 Add to Vercel NOW
 
 ### Step 1: Go to Vercel Environment Variables
+
 **URL**: https://vercel.com/dashboard/NextJS-Spining-Web-App/settings/environment-variables
 
 ### Step 2: Click "Add New"
 
 Fill in:
+
 - **Name**: `MONGODB_URI`
 - **Value**: `mongodb+srv://Amal:Amal@cluster0.c1reif0.mongodb.net/`
 - **Environments**: Check ✅ **Production** and ✅ **Preview**
@@ -58,6 +61,7 @@ Fill in:
 ## ✅ Verify It Works
 
 After redeploying:
+
 1. Go to: https://next-js-spining-web-app-w15l.vercel.app/login
 2. Should load without 500 error
 3. Try logging in

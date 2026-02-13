@@ -3,8 +3,9 @@
 ## Problem You Reported
 
 **Symptoms**:
+
 - ❌ User creates room → works locally
-- ❌ User adds opposite user via user ID → works locally  
+- ❌ User adds opposite user via user ID → works locally
 - ❌ Join socket alert should work → **NOT working in production**
 - ✅ But room creation alerts ARE working in production
 
@@ -25,6 +26,7 @@ When user invites another user:
 Updated **3 critical API routes** to ensure Socket.IO is initialized before emitting events:
 
 ### 1. `/api/rooms/[roomId]` (Room Join)
+
 ```typescript
 // NEW: Initialize Socket.IO before emitting
 const httpServer = (request as any)?.socket?.server;
@@ -38,6 +40,7 @@ await emitToUser(room.creatorId, "user-joined-room", {...});
 ```
 
 ### 2. `/api/rooms/[roomId]/invite` (Send Invite)
+
 ```typescript
 // NEW: Initialize Socket.IO before emitting
 const httpServer = (request as any)?.socket?.server;
@@ -50,6 +53,7 @@ await emitToUser(invitedUser.userId, "user-invited", {...});
 ```
 
 ### 3. `/api/rooms/[roomId]/accept-invite` (Accept Invite)
+
 ```typescript
 // NEW: Initialize Socket.IO before emitting
 const httpServer = (request as any)?.socket?.server;
@@ -66,11 +70,13 @@ await emitToUser(updatedRoom.creatorId, "user-joined-room", {...});
 ## 🚀 Deploy the Fix
 
 ### Step 1: Pull Latest Code
+
 ```bash
 git pull origin main
 ```
 
 ### Step 2: Redeploy on Vercel
+
 1. Go to: https://vercel.com/dashboard/NextJS-Spining-Web-App/deployments
 2. Click latest deployment
 3. Click **3-dot menu** → **Redeploy**
@@ -79,6 +85,7 @@ git pull origin main
 ### Step 3: Test Socket.IO Events
 
 **Scenario 1: Add User by ID**
+
 ```
 1. User A: Logged in on Browser 1
 2. User B: Logged in on Browser 2
@@ -90,6 +97,7 @@ git pull origin main
 ```
 
 **Scenario 2: Invite by Email**
+
 ```
 1. User A: Create room
 2. User A: Invite User B via email
@@ -102,18 +110,19 @@ git pull origin main
 
 ## 📊 Events Now Working in Production
 
-| Event | Trigger | Status |
-|-------|---------|--------|
-| `room-created` | Room created | ✅ Working |
-| `user-invited` | User invited | ✅ **FIXED** |
+| Event              | Trigger              | Status       |
+| ------------------ | -------------------- | ------------ |
+| `room-created`     | Room created         | ✅ Working   |
+| `user-invited`     | User invited         | ✅ **FIXED** |
 | `user-joined-room` | User accepted invite | ✅ **FIXED** |
-| Multiplayer sync | Game events | ✅ Ready |
+| Multiplayer sync   | Game events          | ✅ Ready     |
 
 ---
 
 ## 🔍 How to Verify
 
 ### In Browser Console (F12):
+
 ```javascript
 // Should show invitation received
 🎮 Received user-invited event
@@ -125,9 +134,11 @@ git pull origin main
 ```
 
 ### In Vercel Logs:
+
 Go to Deployments → Latest → Logs
 
 Should show:
+
 ```
 ✅ Socket.IO initialized for invite events
 ✓ Real-time invitation emitted to user [userId]
@@ -173,14 +184,17 @@ Browser 1 (User A)
 ## 🎯 What Works Now
 
 ✅ **User Invitations**
+
 - Add by user ID → User gets alert
 - Invite by email → User gets notification
 
 ✅ **Room Joining**
+
 - Accept invite → Creator gets alert
 - User joins room → Real-time sync
 
 ✅ **Game Events**
+
 - Both players ready → Can spin wheel
 - One player spins → Other sees rotation
 - Winner determined → Both see result
@@ -190,6 +204,7 @@ Browser 1 (User A)
 ## 🔄 Before & After
 
 ### Before (Broken in Production)
+
 ```
 User A: "Add User B by ID"
    ↓
@@ -203,6 +218,7 @@ User B: Nothing happens ❌
 ```
 
 ### After (Fixed)
+
 ```
 User A: "Add User B by ID"
    ↓

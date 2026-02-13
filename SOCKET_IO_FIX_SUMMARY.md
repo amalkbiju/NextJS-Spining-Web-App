@@ -1,11 +1,13 @@
 # 🔧 Socket.IO Production Fix - Complete Guide
 
 ## Problem You Reported
+
 - ❌ Socket.IO works locally but not in production
 - ❌ User creates room, but other user doesn't get alert
 - ❌ Users can't see each other's actions in real-time
 
 ## Root Cause Identified
+
 **CORS & Domain Configuration Issue**
 
 The Socket.IO server wasn't configured to accept connections from your Vercel production domain.
@@ -14,10 +16,12 @@ The Socket.IO server wasn't configured to accept connections from your Vercel pr
 
 ## ✅ What Was Fixed
 
-### 1. **Socket.IO CORS Configuration** 
+### 1. **Socket.IO CORS Configuration**
+
 **File**: `lib/socketIOFactory.ts`
 
 **Before** (broken in production):
+
 ```typescript
 cors: {
   origin: "*",  // Too permissive, doesn't work properly on Vercel
@@ -25,6 +29,7 @@ cors: {
 ```
 
 **After** (works in production):
+
 ```typescript
 cors: {
   origin: [
@@ -39,7 +44,9 @@ cors: {
 ```
 
 ### 2. **Server Configuration**
+
 Added proper Socket.IO server settings:
+
 ```typescript
 {
   path: "/api/socket",
@@ -50,6 +57,7 @@ Added proper Socket.IO server settings:
 ```
 
 ### 3. **Room Broadcasting**
+
 Updated room creation to ensure Socket.IO is initialized before broadcasting.
 
 ---
@@ -59,9 +67,11 @@ Updated room creation to ensure Socket.IO is initialized before broadcasting.
 ### Step 1: Verify Environment Variable
 
 Go to Vercel Dashboard:
+
 - URL: https://vercel.com/dashboard/NextJS-Spining-Web-App/settings/environment-variables
 
 **Make sure this exists**:
+
 ```
 NEXTAUTH_URL = https://next-js-spining-web-app-t8st.vercel.app
 ```
@@ -78,6 +88,7 @@ NEXTAUTH_URL = https://next-js-spining-web-app-t8st.vercel.app
 ### Step 3: Test Socket.IO
 
 **Open 2 browser windows**:
+
 1. Login as User 1 in Window 1
 2. Login as User 2 in Window 2
 3. User 1: Click "Create Room"
@@ -90,6 +101,7 @@ If you see the alert, Socket.IO is working! 🎉
 ## 🔍 How to Verify It's Working
 
 ### In Browser Console (F12):
+
 ```javascript
 // Should show something like:
 ✅ Socket.IO connected: [socket-id]
@@ -97,6 +109,7 @@ If you see the alert, Socket.IO is working! 🎉
 ```
 
 ### In Vercel Logs:
+
 1. Go to Deployments → Latest → Logs
 2. Look for:
    ```
@@ -125,6 +138,7 @@ Production (Vercel)
 ```
 
 ### Events Flow
+
 ```
 User 1 Creates Room
     ↓
@@ -142,19 +156,23 @@ User 2 receives alert immediately ✅
 ## 🎯 Features That Now Work in Production
 
 ✅ **Room Creation**
+
 - User 1 creates room
 - User 2 gets immediate alert
 
 ✅ **Join Notifications**
+
 - User 2 joins User 1's room
 - User 1 gets notified
 
 ✅ **Game Synchronization**
+
 - Both players spin wheel
 - Events sync in real-time
 - Arrow points to correct winner
 
 ✅ **Multiplayer Events**
+
 - Invitations sent/received
 - Player status updates
 - Score synchronization
@@ -163,33 +181,37 @@ User 2 receives alert immediately ✅
 
 ## 📋 File Changes Made
 
-| File | Change | Why |
-|------|--------|-----|
-| `lib/socketIOFactory.ts` | Added CORS with production domain | Fix CORS error |
-| `app/api/rooms/route.ts` | Import Socket.IO factory | Ensure initialization |
-| `SOCKET_IO_PRODUCTION_FIX.md` | New troubleshooting guide | Help with issues |
+| File                          | Change                            | Why                   |
+| ----------------------------- | --------------------------------- | --------------------- |
+| `lib/socketIOFactory.ts`      | Added CORS with production domain | Fix CORS error        |
+| `app/api/rooms/route.ts`      | Import Socket.IO factory          | Ensure initialization |
+| `SOCKET_IO_PRODUCTION_FIX.md` | New troubleshooting guide         | Help with issues      |
 
 ---
 
 ## 🆘 If Still Not Working
 
 ### Check 1: Env Variable
+
 ```bash
 # Go to Vercel Settings and verify:
 NEXTAUTH_URL = https://next-js-spining-web-app-t8st.vercel.app
 ```
 
 ### Check 2: Browser Console
+
 - Open F12 → Console
 - Look for errors starting with "Socket" or "CORS"
 - Share error message with support
 
 ### Check 3: Vercel Logs
+
 - Go to Deployments → Latest
 - Click **Logs** tab
 - Search for "CORS" or "Socket.IO"
 
 ### Check 4: Force Refresh
+
 - Hard refresh browser: `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (Mac)
 - Clear browser cache
 - Try in different browser

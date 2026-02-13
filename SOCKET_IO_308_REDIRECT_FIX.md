@@ -3,6 +3,7 @@
 ## New Issue Discovered
 
 **Error:** Socket.IO polling requests returning **308 Permanent Redirect**
+
 - Request URL: `/api/socket/` (with trailing slash)
 - Redirects to: `/api/socket` (without trailing slash)
 - Status: **308 Permanent Redirect**
@@ -35,7 +36,7 @@ Client follows redirect but Socket.IO connection is broken
 ```typescript
 socket = io(socketUrl, {
   path: "/api/socket",
-  addTrailingSlash: false,  // ← NEW: Prevent client from adding trailing slash
+  addTrailingSlash: false, // ← NEW: Prevent client from adding trailing slash
   transports: ["polling", "websocket"],
   // ... rest of config
 });
@@ -46,7 +47,7 @@ socket = io(socketUrl, {
 ```typescript
 const io = new Server(httpServer, {
   path: "/api/socket",
-  addTrailingSlash: false,  // ← NEW: Tell Socket.IO not to expect trailing slash
+  addTrailingSlash: false, // ← NEW: Tell Socket.IO not to expect trailing slash
   transports: ["polling", "websocket"],
   // ... rest of config
 });
@@ -55,7 +56,7 @@ const io = new Server(httpServer, {
 ### Change 3: Better Handler Logging (`pages/api/socket.ts`)
 
 ```typescript
-console.log("   Path:", req.url);  // Added for debugging redirects
+console.log("   Path:", req.url); // Added for debugging redirects
 ```
 
 ## How It Works Now
@@ -73,11 +74,11 @@ No redirect needed! ✅
 
 ## What Changed
 
-| File | Change | Impact |
-|------|--------|--------|
-| `lib/socket.ts` | Added `addTrailingSlash: false` | Client won't add trailing slash to requests |
-| `lib/socketIOFactory.ts` | Re-added `addTrailingSlash: false` | Server expects no trailing slash |
-| `pages/api/socket.ts` | Added `Path:` to logging | Better debugging of redirect issues |
+| File                     | Change                             | Impact                                      |
+| ------------------------ | ---------------------------------- | ------------------------------------------- |
+| `lib/socket.ts`          | Added `addTrailingSlash: false`    | Client won't add trailing slash to requests |
+| `lib/socketIOFactory.ts` | Re-added `addTrailingSlash: false` | Server expects no trailing slash            |
+| `pages/api/socket.ts`    | Added `Path:` to logging           | Better debugging of redirect issues         |
 
 ## Commit
 
@@ -93,6 +94,7 @@ No redirect needed! ✅
 ## Testing Instructions
 
 ### Immediate Test
+
 ```bash
 # 1. Hard refresh browser (Cmd+Shift+R or Ctrl+Shift+R)
 # 2. Open DevTools Network tab
@@ -103,6 +105,7 @@ No redirect needed! ✅
 ```
 
 ### Verification
+
 ```javascript
 // In browser console, should see:
 ✅ Socket.IO connected: [socket-id]
@@ -113,6 +116,7 @@ GET /api/socket?EIO=4&transport=polling → 200 OK
 ```
 
 ### Success Indicators
+
 - ✅ No 308 Permanent Redirect responses
 - ✅ All Socket.IO requests show 200 OK
 - ✅ Polling requests sent without trailing slash
@@ -122,6 +126,7 @@ GET /api/socket?EIO=4&transport=polling → 200 OK
 ## Why `addTrailingSlash: false` Matters
 
 ### With `addTrailingSlash: true` (Old - Broken)
+
 ```
 /api/socket/  ← Socket.IO adds trailing slash
 Vercel sees extra slash
@@ -130,6 +135,7 @@ Breaks polling connection ❌
 ```
 
 ### With `addTrailingSlash: false` (New - Fixed)
+
 ```
 /api/socket   ← No trailing slash
 Vercel handles directly

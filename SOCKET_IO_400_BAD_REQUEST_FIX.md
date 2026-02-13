@@ -3,6 +3,7 @@
 ## Problem Summary
 
 **Error:** Socket.IO polling requests returning **400 Bad Request** from Vercel production
+
 - Request URL: `/api/socket?EIO=4&transport=polling&t=...`
 - Status Code: **400 Bad Request**
 - Root Cause: Handler not properly processing Socket.IO polling protocol requests
@@ -42,14 +43,19 @@ if (req.method === "GET") {
 const isSocketIORequest = req.query.transport || req.query.EIO;
 
 if (isSocketIORequest) {
-  console.log("📡 Socket.IO polling/upgrade request - letting Socket.IO engine handle");
+  console.log(
+    "📡 Socket.IO polling/upgrade request - letting Socket.IO engine handle",
+  );
   return; // Don't send ANY response - Socket.IO handles it
 }
 
-return res.status(200).json({ success: true, message: "Socket.IO endpoint ready" });
+return res
+  .status(200)
+  .json({ success: true, message: "Socket.IO endpoint ready" });
 ```
 
 **Why this works:**
+
 - Detects real Socket.IO requests via query parameters (`transport` or `EIO`)
 - Returns immediately WITHOUT sending a response body
 - Lets Socket.IO's engine handle the response through the HTTP server
@@ -63,7 +69,7 @@ return res.status(200).json({ success: true, message: "Socket.IO endpoint ready"
 // BEFORE
 const io = new Server(httpServer, {
   path: "/api/socket",
-  addTrailingSlash: false,  // ← This was interfering
+  addTrailingSlash: false, // ← This was interfering
   transports: ["polling", "websocket"],
   // ...
 });
@@ -73,12 +79,13 @@ const io = new Server(httpServer, {
   path: "/api/socket",
   // Removed addTrailingSlash: false (use default)
   transports: ["polling", "websocket"],
-  allowEIO3: true,  // ← Support both EIO versions
+  allowEIO3: true, // ← Support both EIO versions
   // ...
 });
 ```
 
 **Why this works:**
+
 - `addTrailingSlash: false` was causing Socket.IO to not match the path correctly
 - `allowEIO3: true` ensures compatibility with different Socket.IO client versions
 - Default behavior works better with Vercel's path routing
@@ -119,6 +126,7 @@ const io = new Server(httpServer, {
 ### Why Pages API `/api/socket` is Used
 
 In Next.js with Pages API:
+
 - App Router can't intercept all requests to `/api/socket`
 - Pages API route allows direct access to `res.socket.server`
 - Socket.IO attaches to the HTTP server: `new Server(httpServer)`

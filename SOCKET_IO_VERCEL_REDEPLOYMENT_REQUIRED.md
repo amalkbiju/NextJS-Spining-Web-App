@@ -5,7 +5,7 @@
 You're still seeing **400 Bad Request** on Socket.IO requests because:
 
 ✅ **Code is fixed** - Latest changes committed and pushed to GitHub  
-❌ **Vercel hasn't redeployed yet** - Old code still running on production  
+❌ **Vercel hasn't redeployed yet** - Old code still running on production
 
 ## What Happened
 
@@ -43,6 +43,7 @@ Timeline:
 ### Option 3: Trigger via GitHub (Automatic)
 
 Vercel should auto-trigger on push, but if not:
+
 1. Make a small change to any file
 2. Commit: `git commit --allow-empty -m "Trigger Vercel deployment"`
 3. Push: `git push`
@@ -51,6 +52,7 @@ Vercel should auto-trigger on push, but if not:
 ## What to Expect After Redeployment
 
 ### Before Fix (Current)
+
 ```
 GET /api/socket
 Status: 400 Bad Request ❌
@@ -58,6 +60,7 @@ Console: ❌ Connection error
 ```
 
 ### After Redeployment
+
 ```
 GET /api/socket
 Status: 200 OK ✅
@@ -76,10 +79,12 @@ Console: ✅ Polling active
    - Check it matches your latest commits
 
 2. **Hard Refresh Browser**
+
    ```
    Mac: Cmd + Shift + R
    Windows: Ctrl + Shift + R
    ```
+
    - Clear all cached files
    - Close all tabs of your app
    - Reopen in fresh tab

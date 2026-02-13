@@ -3,6 +3,7 @@
 ## Problem: Socket.IO Not Working in Production
 
 **Symptoms:**
+
 - ❌ Room creation not broadcasting to other users
 - ❌ Users don't receive alerts for room invites
 - ❌ Game events not syncing between players
@@ -13,6 +14,7 @@
 ## Root Cause
 
 Socket.IO in production (Vercel) has issues with:
+
 1. **CORS configuration** - Not allowing cross-origin connections
 2. **WebSocket support** - Vercel may block WebSocket in some regions
 3. **Production domain URL** - Client connecting to different domain than server expects
@@ -22,23 +24,27 @@ Socket.IO in production (Vercel) has issues with:
 ## ✅ Fixed Issues
 
 ### 1. CORS Configuration
+
 **Updated**: `lib/socketIOFactory.ts`
 
 Now includes production domain in allowed origins:
+
 ```typescript
 const allowedOrigins: string[] = [
-  "http://localhost:3000",           // Local development
-  "http://127.0.0.1:3000",           // Local development
-  "http://192.168.1.11:3000",        // Local network
+  "http://localhost:3000", // Local development
+  "http://127.0.0.1:3000", // Local development
+  "http://192.168.1.11:3000", // Local network
 ];
 
 if (process.env.NEXTAUTH_URL) {
-  allowedOrigins.push(process.env.NEXTAUTH_URL);  // Production URL
+  allowedOrigins.push(process.env.NEXTAUTH_URL); // Production URL
 }
 ```
 
 ### 2. Socket.IO Configuration
+
 **Updated**: Server-side settings
+
 - ✅ `transports: ["websocket", "polling"]` - WebSocket with HTTP polling fallback
 - ✅ `pingInterval: 25000` - Keep-alive pings every 25 seconds
 - ✅ `pingTimeout: 60000` - 60 second timeout
@@ -49,13 +55,17 @@ if (process.env.NEXTAUTH_URL) {
 ## 🚀 Deployment Steps to Fix Socket.IO
 
 ### Step 1: Update Environment Variable
+
 Make sure `NEXTAUTH_URL` is set on Vercel:
+
 - Go to: https://vercel.com/dashboard/NextJS-Spining-Web-App/settings/environment-variables
 - Add: `NEXTAUTH_URL=https://your-deployment.vercel.app`
 - Select: Production & Preview environments
 
 ### Step 2: Redeploy
+
 In Vercel Dashboard:
+
 1. Go to **Deployments**
 2. Click the latest deployment
 3. Click **3-dot menu (•••)** → **Redeploy**
@@ -64,6 +74,7 @@ In Vercel Dashboard:
 ### Step 3: Verify Socket.IO Connection
 
 **Check in Browser Console** (F12 → Console tab):
+
 ```javascript
 // Should show successful connection
 // Look for messages like:
@@ -71,6 +82,7 @@ In Vercel Dashboard:
 ```
 
 **Test Room Creation**:
+
 1. Open 2 browser windows/tabs to your app
 2. Login with different users in each
 3. User 1: Create a room
@@ -100,12 +112,12 @@ In Vercel Dashboard:
 
 ### Common Errors and Fixes
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `CORS error` | Production URL not in allowed origins | Add NEXTAUTH_URL env var |
-| `WebSocket connection refused` | Firewall/network issue | Vercel supports WebSocket natively |
-| `Socket already connected` | Multiple Socket.IO instances | Check client initialization |
-| `Connection timeout` | Socket.IO not initialized | Ensure /api/socket is called on app load |
+| Error                          | Cause                                 | Fix                                      |
+| ------------------------------ | ------------------------------------- | ---------------------------------------- |
+| `CORS error`                   | Production URL not in allowed origins | Add NEXTAUTH_URL env var                 |
+| `WebSocket connection refused` | Firewall/network issue                | Vercel supports WebSocket natively       |
+| `Socket already connected`     | Multiple Socket.IO instances          | Check client initialization              |
+| `Connection timeout`           | Socket.IO not initialized             | Ensure /api/socket is called on app load |
 
 ---
 
@@ -130,6 +142,7 @@ User 1 (Browser)
 ```
 
 ### Key Files:
+
 - **Server**: `lib/socketIOFactory.ts` - Creates & configures Socket.IO server
 - **Server**: `lib/socketServer.ts` - Broadcasting utilities
 - **Client**: `lib/socket.ts` - Client connection logic
@@ -141,14 +154,16 @@ User 1 (Browser)
 ## 🎯 Testing Socket.IO in Production
 
 ### Test 1: Direct Connection
+
 ```typescript
 // In browser console while app is open:
-fetch('https://your-app.vercel.app/api/socket')
-  .then(r => r.json())
-  .then(d => console.log('Socket.IO Status:', d))
+fetch("https://your-app.vercel.app/api/socket")
+  .then((r) => r.json())
+  .then((d) => console.log("Socket.IO Status:", d));
 ```
 
 ### Test 2: Room Broadcasting
+
 1. Open 2 browsers (different users)
 2. Look in **Network → WS** for active WebSocket
 3. Create a room on User 1
@@ -158,6 +173,7 @@ fetch('https://your-app.vercel.app/api/socket')
    ```
 
 ### Test 3: Game Events
+
 1. Both users join same room
 2. User 1 spins wheel
 3. User 2's wheel should rotate synchronously
@@ -170,6 +186,7 @@ fetch('https://your-app.vercel.app/api/socket')
 ### Adjust Socket.IO Settings (if needed)
 
 Edit `lib/socketIOFactory.ts`:
+
 ```typescript
 pingInterval: 25000,      // Increase if timeout
 pingTimeout: 60000,       // Increase for slow connections
@@ -179,9 +196,10 @@ reconnectionDelay: 1000,  // Wait 1s before retry
 ### Enable Socket.IO Debugging
 
 Add to `lib/socket.ts`:
+
 ```typescript
 socket.onAny((event, ...args) => {
-  console.log('🔵 Socket Event:', event, args);
+  console.log("🔵 Socket Event:", event, args);
 });
 ```
 

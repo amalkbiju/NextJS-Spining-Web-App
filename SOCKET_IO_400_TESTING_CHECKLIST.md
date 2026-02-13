@@ -15,6 +15,7 @@
 ## Testing Checklist
 
 ### Step 1: Hard Refresh (IMPORTANT!)
+
 ```bash
 # Mac: Cmd + Shift + R
 # Windows: Ctrl + Shift + R
@@ -25,6 +26,7 @@ DevTools → Application → Storage → Clear Site Data
 ### Step 2: Check Console for Connection Success ✅
 
 Open browser DevTools (F12) and look for:
+
 ```
 ✅ Socket.IO connected: eJ7-xxx...
 📤 Emitted user-join event for userId: USER_ID
@@ -46,15 +48,18 @@ If you see `❌` errors instead, report them.
 **Open 2 browser windows:**
 
 **Window 1 (User A):**
+
 - Login as User A
 - Click "Create Room"
 - Copy room link
 
 **Window 2 (User B):**
+
 - Login as User B
 - Paste room link and join
 
 **Expected Results:**
+
 - ✅ User A receives "User B joined" alert INSTANTLY
 - ✅ User B sees room participants
 - ✅ Both can see each other in game page
@@ -63,6 +68,7 @@ If you see `❌` errors instead, report them.
 ### Step 5: Monitor for Errors
 
 If you see ANY of these in console:
+
 - `❌ Socket.IO connection error`
 - `❌ Failed to connect to Socket.IO`
 - `400 Bad Request on /api/socket`
@@ -116,13 +122,14 @@ npm run dev
    - Check build logs for errors
 
 2. **Clear Everything:**
+
    ```bash
    # Browser
    - Clear all site data (DevTools → Storage)
    - Hard refresh (Cmd+Shift+R)
    - Close all tabs of your app
    - Reopen in new tab
-   
+
    # Local dev (if testing locally)
    npm run dev (restart)
    ```
@@ -135,6 +142,7 @@ npm run dev
 ## Success Indicators ✅
 
 After fix is deployed:
+
 - [ ] No 400 errors in Network tab
 - [ ] Socket.IO shows "connected" in console
 - [ ] Polling requests return 200 OK
