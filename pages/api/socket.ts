@@ -9,20 +9,12 @@ export const config = {
 };
 
 /**
- * Socket.IO Handler for Vercel Serverless
+ * Socket.IO Handler for Next.js Pages API
  * 
- * CRITICAL REALIZATION: Socket.IO's engine.handleRequest() doesn't work
- * on Vercel because Next.js API route req/res objects aren't compatible
- * with how engine.handleRequest expects to manipulate sockets.
- * 
- * NEW APPROACH: Just initialize Socket.IO and return 200 OK.
- * Socket.IO's server-side listeners are already attached to the httpServer,
- * so they will intercept Socket.IO protocol requests automatically.
- * 
- * This handler just needs to:
- * 1. Initialize Socket.IO (so it attaches listeners)
- * 2. Return a valid response (200 OK)
- * 3. Get out of the way
+ * This handler:
+ * 1. Initializes Socket.IO on the httpServer
+ * 2. Delegates Socket.IO protocol requests to the Socket.IO engine
+ * 3. Socket.IO listens on the httpServer and intercepts requests matching its path
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log(`[Socket] ${req.method} ${req.url}`);
@@ -30,33 +22,48 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const httpServer = (res.socket as any)?.server;
 
-    // Initialize Socket.IO (if not already done)
-    let io;
-    if (httpServer) {
-      try {
-        io = getOrCreateSocketIO(httpServer);
-        setGlobalIO(io);
-        console.log("[Socket] Initialized Socket.IO");
-      } catch (err) {
-        console.error("[Socket] Failed to init:", err);
-      }
-    } else {
-      io = getGlobalIO();
-      console.log("[Socket] Using cached Socket.IO");
+    if (!httpServer) {
+      console.error("[Socket] No httpServer available");
+      res.status(500).json({ error: "No httpServer" });
+      return;
     }
 
-    // The key fix: DON'T call engine.handleRequest()
-    // Just acknowledge the request with 200 OK
-    // Socket.IO handles the protocol work through other means
-    
-    console.log("[Socket] Returning 200 OK");
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST");
-    res.setHeader("Content-Type", "application/json");
-    res.status(200).json({ ok: true });
+    // Initialize Socket.IO (if not already done)
+    let io;
+    try {
+      io = getOrCreateSocketIO(httpServer);
+      setGlobalIO(io);
+      console.log("[Socket] Socket.IO initialized");
+    } catch (err) {
+      console.error("[Socket] Failed to initialize Socket.IO:", err);
+      res.status(500).json({ error: "Socket.IO init failed" });
+      return;
+    }
 
+    // Check if this is a Socket.IO protocol request
+    const isSocketIORequest =
+      req.url?.includes("socket.io") || req.method === "GET" || req.method === "POST";
+
+    if (isSocketIORequest && io?.engine?.handleRequest) {
+      console.log("[Socket] Delegating to Socket.IO engine handler");
+      try {
+        // Let Socket.IO engine handle the protocol
+        io.engine.handleRequest(req, res);
+      } catch (err) {
+        console.error("[Socket] Engine handler error:", err);
+        // Don't send response here - Socket.IO should have handled it
+      }
+    } else {
+      console.log("[Socket] Returning 200 OK for health check");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST");
+      res.setHeader("Content-Type", "application/json");
+      res.status(200).json({ ok: true });
+    }
   } catch (error) {
     console.error("[Socket] Error:", error);
-    res.status(500).json({ error: "Internal error" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal error" });
+    }
   }
 }
