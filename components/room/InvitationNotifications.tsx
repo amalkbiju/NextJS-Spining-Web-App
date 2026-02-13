@@ -25,8 +25,15 @@ export default function InvitationNotifications({
 
   useEffect(() => {
     const handleUserInvited = (data: any) => {
+      console.log("📨 Received user-invited event:", {
+        invitedUserEmail: data.invitedUser?.email,
+        currentUserEmail: user?.email,
+        eventData: data,
+      });
+
       // Check if this notification is for the current user
       if (data.invitedUser.email === user?.email) {
+        console.log("✅ Email match! Displaying invitation popup");
         const invitation: Invitation = {
           roomId: data.roomId,
           creatorName: data.creator.name,
@@ -47,6 +54,11 @@ export default function InvitationNotifications({
         if (onInvitationReceived) {
           onInvitationReceived(invitation);
         }
+      } else {
+        console.warn("❌ Email mismatch - invitation not for this user", {
+          invitedUserEmail: data.invitedUser?.email,
+          currentUserEmail: user?.email,
+        });
       }
     };
 

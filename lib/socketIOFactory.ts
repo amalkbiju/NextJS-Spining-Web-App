@@ -68,6 +68,10 @@ export function createSocketIOInstance(httpServer: any): any {
         socket.join(`user-${userId}`);
         console.log(
           `✓ User ${userId} joined room 'user-${userId}' with socket ${socket.id}`,
+          {
+            totalUsersTracked: userSockets.size,
+            usersInRoom: Array.from(io.sockets.adapter.rooms.get(`user-${userId}`) || []),
+          },
         );
 
         socket.emit("joined-user-room", { userId, socketId: socket.id });

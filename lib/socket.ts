@@ -98,6 +98,11 @@ export function getSocket(): Socket | null {
  * @param event - Event name to listen for
  * @param callback - Callback function when event is received
  */
+/**
+ * Register a listener for a socket event
+ * @param event - Event name to listen for
+ * @param callback - Callback function when event is received
+ */
 export function onEvent(event: string, callback: (...args: any[]) => void) {
   if (!socket) {
     console.warn(
@@ -106,7 +111,10 @@ export function onEvent(event: string, callback: (...args: any[]) => void) {
     return;
   }
 
-  console.log(`📡 Listening for event: ${event}`);
+  console.log(`📡 Listening for event: ${event}`, {
+    socketConnected: socket?.connected,
+    socketId: socket?.id,
+  });
   socket.on(event, callback);
 }
 
