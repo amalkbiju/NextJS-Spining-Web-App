@@ -2,46 +2,76 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
 import { setGlobalIO, getGlobalIO } from "@/lib/getIO";
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 /**
  * Socket.IO API Handler for Vercel Serverless
  * 
- * IMPORTANT: On Vercel, Socket.IO won't auto-attach to the httpServer via listeners.
- * The handler must explicitly call Socket.IO's request handler.
+ * CRITICAL FIX: Explicitly call Socket.IO engine's handleRequest method
+ * This is the proper way to integrate Socket.IO with Next.js on serverless.
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const httpServer = (res.socket as any)?.server;
     
+    console.log("[Socket] Handler called", {
+      method: req.method,
+      path: req.url,
+      hasServer: !!httpServer,
+    });
+    
     // Initialize Socket.IO
-    const io = httpServer 
-      ? getOrCreateSocketIO(httpServer)
-      : getGlobalIO();
+    let io;
+    try {
+      if (httpServer) {
+        io = getOrCreateSocketIO(httpServer);
+        setGlobalIO(io);
+        console.log("[Socket] Created/got Socket.IO from httpServer");
+      } else {
+        io = getGlobalIO();
+        console.log("[Socket] Using cached Socket.IO instance");
+      }
+    } catch (err) {
+      console.error("[Socket] Error getting IO:", err);
+      throw err;
+    }
     
     if (!io) {
-      console.log("[Socket] Socket.IO not initialized");
-      return res.status(503).json({ error: "Socket.IO not ready" });
+      console.error("[Socket] Socket.IO instance is null");
+      return res.status(503).json({ error: "Socket.IO not initialized" });
     }
 
-    setGlobalIO(io);
-
-    // The critical fix: Socket.IO's engine has a request handler
-    // We need to explicitly call it instead of letting it auto-attach
-    // @ts-ignore - accessing private engine property
+    // Access the engine that Socket.IO creates
+    // @ts-ignore - engine is private but we need to access it
     const engine = io.engine;
     
-    if (engine && engine.handleRequest) {
-      // Let Socket.IO's engine handler process this request
-      console.log(`[Socket] Delegating to Socket.IO engine: ${req.method} ${req.url}`);
-      engine.handleRequest(req, res);
-      return;
+    console.log("[Socket] Engine status:", {
+      hasEngine: !!engine,
+      engineType: typeof engine,
+      hasHandleRequest: engine ? typeof engine.handleRequest : "N/A",
+    });
+    
+    if (!engine || typeof engine.handleRequest !== "function") {
+      console.error("[Socket] Engine or handleRequest not available");
+      return res.status(500).json({ error: "Engine not ready" });
     }
 
-    // Fallback if engine handler not available
-    console.log("[Socket] Socket.IO engine handler not available");
-    return res.status(200).json({ ready: true });
+    // Call Socket.IO's engine handler to process the request
+    console.log("[Socket] Calling engine.handleRequest");
+    engine.handleRequest(req, res);
 
   } catch (error) {
-    console.error("[Socket] Error:", error);
-    return res.status(500).json({ error: String(error) });
+    console.error("[Socket] Caught exception:", error);
+    try {
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Handler exception", msg: String(error) });
+      }
+    } catch (e) {
+      console.error("[Socket] Failed to send error response:", e);
+    }
   }
 }
