@@ -63,6 +63,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     console.log("[Socket] Delegating to Socket.IO engine");
+    console.log("[Socket] Request:", {
+      method: req.method,
+      url: req.url,
+      query: req.query,
+    });
 
     // Let Socket.IO engine handle the request
     // The engine will handle the Socket.IO protocol (long-polling, websocket upgrade, etc.)

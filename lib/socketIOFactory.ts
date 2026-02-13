@@ -39,18 +39,16 @@ export function createSocketIOInstance(httpServer: any): any {
     const io = new Server(httpServer, {
       path: "/api/socket",
       addTrailingSlash: false,
-      transports: ["websocket", "polling"], // Try websocket first, fallback to polling
-      pingInterval: 15000, // Send ping every 15 seconds to keep connection alive
-      pingTimeout: 30000, // Wait 30 seconds for pong before closing
+      transports: ["websocket"], // Only WebSocket - polling has issues with Next.js Pages API
+      pingInterval: 15000,
+      pingTimeout: 30000,
       maxHttpBufferSize: 1e6,
       allowEIO3: true,
       cors: corsConfig,
-      // Production optimizations for Vercel
-      serveClient: false, // Don't serve Socket.IO client library
+      serveClient: false,
       connectTimeout: 45000,
       upgradeTimeout: 10000,
-      // Prevent idle disconnects
-      allowUpgrades: true,
+      allowUpgrades: false, // No upgrade needed if only WebSocket
       perMessageDeflate: {
         threshold: 2048,
       },

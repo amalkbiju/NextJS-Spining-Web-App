@@ -8,6 +8,8 @@ let socket: Socket | null = null;
  * @returns Socket instance
  */
 export function initSocket(userId?: string): Socket {
+  console.log(`🚀 initSocket() called with userId: ${userId}`);
+
   // Return existing socket if already exists
   if (socket) {
     console.log("✅ Socket.IO instance already exists, reusing:", {
@@ -42,22 +44,17 @@ export function initSocket(userId?: string): Socket {
 
   socket = io(socketUrl, {
     path: "/api/socket",
-    addTrailingSlash: false, // ← FIX: Prevent trailing slash that causes Vercel redirect
-    transports: ["websocket", "polling"], // Try WebSocket first, fallback to polling
+    addTrailingSlash: false,
+    transports: ["websocket"], // ONLY use WebSocket, skip polling which returns 400
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionAttempts: 15, // Increased attempts for Vercel
+    reconnectionAttempts: 15,
     reconnectionDelayMax: 5000,
     forceNew: false,
     multiplex: true,
-    upgrade: true, // Allow upgrade from polling to websocket
-    rememberUpgrade: true, // Remember transport choice
     randomizationFactor: 0.5,
-    // Increase timeouts for Vercel cold starts
     timeout: 60000,
-    // CORS settings
     withCredentials: false,
-    // Enable debug logging in development
     extraHeaders: {
       "X-Client-Version": "socket.io-client/4.8.3",
     },
