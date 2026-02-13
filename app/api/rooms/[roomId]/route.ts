@@ -159,6 +159,7 @@ export async function PUT(
         roomId,
         joinedUser: {
           userId: decoded.userId,
+          name: currentUser?.name,
           email: decoded.email,
         },
         room,

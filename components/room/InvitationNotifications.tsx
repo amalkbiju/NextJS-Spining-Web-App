@@ -62,10 +62,41 @@ export default function InvitationNotifications({
       }
     };
 
+    const handleUserJoinedRoom = (data: any) => {
+      console.log("📨 Received user-joined-room event:", {
+        roomId: data.roomId,
+        joinedUser: data.joinedUser,
+        eventData: data,
+      });
+
+      // Show notification to room creator when user joins
+      if (data.joinedUser?.email) {
+        console.log("✅ User joined! Displaying join notification");
+        const invitation: Invitation = {
+          roomId: data.roomId,
+          creatorName: data.joinedUser.name || "User",
+          creatorEmail: data.joinedUser.email,
+          timestamp: new Date().toISOString(),
+        };
+
+        setInvitations((prev) => [invitation, ...prev]);
+
+        // Show browser notification if available
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification(`User Joined Your Room!`, {
+            body: `${data.joinedUser.name || "Someone"} has joined your spinning wheel game!`,
+            icon: "/wheel-icon.png",
+          });
+        }
+      }
+    };
+
     onEvent("user-invited", handleUserInvited);
+    onEvent("user-joined-room", handleUserJoinedRoom);
 
     return () => {
       offEvent("user-invited", handleUserInvited);
+      offEvent("user-joined-room", handleUserJoinedRoom);
     };
   }, [user?.email, onInvitationReceived]);
 
