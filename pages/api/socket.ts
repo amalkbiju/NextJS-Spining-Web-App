@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { Socket as EngineSocket } from "engine.io";
 import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
 import { setGlobalIO, getGlobalIO } from "@/lib/getIO";
 
@@ -16,19 +17,20 @@ export const config = {
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Log the full request details
   console.log(`[Socket] ${req.method} ${req.url}`);
-  console.log("[Socket] Query params:", req.query);
-  console.log("[Socket] Headers:", {
-    upgrade: req.headers.upgrade,
-    connection: req.headers.connection,
-  });
 
   try {
     // Get the HTTP server that Next.js created
-    const httpServer = (res.socket as any)?.server;
+    // The res.socket is an internal Node.js socket
+    // The res.socket.server is the internal Node.js HTTP server
+    const httpServer = (res as any).socket?.server;
 
     if (!httpServer) {
       console.error("[Socket] No httpServer available");
-      return res.status(500).json({ error: "No server" });
+      if (!res.headersSent) {
+        res.status(500);
+        res.end("No server");
+      }
+      return;
     }
 
     // Initialize Socket.IO (if not already done)
@@ -40,7 +42,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         console.log("[Socket] Socket.IO initialized successfully");
       } catch (err) {
         console.error("[Socket] Failed to initialize Socket.IO:", err);
-        return res.status(500).json({ error: "Init failed" });
+        if (!res.headersSent) {
+          res.status(500);
+          res.end("Init failed");
+        }
+        return;
       }
     } else {
       console.log("[Socket] Reusing existing Socket.IO instance");
@@ -50,28 +56,23 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!io || !io.engine) {
       console.error("[Socket] Socket.IO engine not ready");
       if (!res.headersSent) {
-        return res.status(503).json({ error: "Socket.IO not ready" });
+        res.status(503);
+        res.end("Socket.IO not ready");
       }
       return;
     }
 
-    // Log before delegating to engine
     console.log("[Socket] Delegating to Socket.IO engine");
 
     // Let Socket.IO engine handle the request
-    // This handles HTTP long-polling and WebSocket upgrades
-    try {
-      io.engine.handleRequest(req, res);
-    } catch (engineError) {
-      console.error("[Socket] Engine error:", engineError);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: "Engine error" });
-      }
-    }
+    // The engine will handle the Socket.IO protocol (long-polling, websocket upgrade, etc.)
+    io.engine.handleRequest(req, res);
   } catch (error) {
     console.error("[Socket] Handler error:", error);
     if (!res.headersSent) {
-      return res.status(500).json({ error: "Internal error" });
+      res.status(500);
+      res.end("Internal error");
     }
   }
 }
+

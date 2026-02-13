@@ -63,6 +63,10 @@ export function initSocket(userId?: string): Socket {
     },
   });
 
+  // ⚠️  CRITICAL: Attach listeners IMMEDIATELY after socket creation
+  // These listeners MUST be attached before socket events fire
+  // Otherwise, Socket.IO might disconnect idle connections
+
   // Connection events
   socket.on("connect", () => {
     console.log("✅ Socket.IO connected:", socket?.id);
@@ -97,6 +101,19 @@ export function initSocket(userId?: string): Socket {
 
   socket.on("error", (error: any) => {
     console.error("❌ Socket.IO error:", error);
+  });
+
+  // Add keep-alive listener to prevent garbage collection
+  socket.onAny((eventName, ...args) => {
+    // Only log non-ping/pong events to avoid spam
+    if (eventName !== "ping" && eventName !== "pong") {
+      console.log(`📨 Socket event received: ${eventName}`);
+    }
+  });
+
+  // Handle server ping requests
+  socket.on("pong", () => {
+    console.log("🔔 Received pong from server");
   });
 
   return socket;

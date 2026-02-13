@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
 import InvitationNotifications from "@/components/room/InvitationNotifications";
-import { initSocket } from "@/lib/socket";
+import { initSocket, getSocket } from "@/lib/socket";
 
 export default function ProtectedLayout({
   children,
@@ -27,37 +27,18 @@ export default function ProtectedLayout({
   }, [isHydrated, isAuthenticated, router]);
 
   // Initialize Socket.IO as soon as user is authenticated
-  // This ensures we're ready to receive invitation alerts immediately
+  // Listeners are already attached in lib/socket.ts
   useEffect(() => {
     if (isHydrated && isAuthenticated && user?.userId) {
       console.log(
         `🔌 Protected layout: Initializing Socket.IO for user ${user.userId}`,
       );
-      const socket = initSocket(user.userId);
+      initSocket(user.userId);
 
-      // Keep socket alive by attaching persistent listeners
-      // These prevent the socket from being garbage collected
-      const handleConnect = () => {
-        console.log("✅ Protected layout: Socket connected");
-      };
-
-      const handleDisconnect = () => {
-        console.log("⚠️  Protected layout: Socket disconnected");
-      };
-
-      // Add listeners that will keep socket alive
-      socket.on("connect", handleConnect);
-      socket.on("disconnect", handleDisconnect);
-
-      // Add a catch-all listener for any events to keep socket active
-      socket.onAny((eventName, ...args) => {
-        console.log(`📨 Socket event received: ${eventName}`);
-      });
-
-      // Add custom keep-alive ping mechanism
-      // This sends a regular ping to keep the connection alive
+      // Start keep-alive ping mechanism
       const pingInterval = setInterval(() => {
-        if (socket.connected) {
+        const socket = getSocket();
+        if (socket?.connected) {
           socket.emit("ping");
           console.log("🔔 Sent keep-alive ping");
         }
@@ -66,9 +47,6 @@ export default function ProtectedLayout({
       // Cleanup on unmount
       return () => {
         clearInterval(pingInterval);
-        socket.off("connect", handleConnect);
-        socket.off("disconnect", handleDisconnect);
-        socket.offAny();
       };
     }
     return undefined;
