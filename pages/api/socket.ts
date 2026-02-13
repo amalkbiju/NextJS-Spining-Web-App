@@ -3,46 +3,45 @@ import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
 import { setGlobalIO, getGlobalIO } from "@/lib/getIO";
 
 /**
- * Socket.IO API Handler
+ * Socket.IO API Handler for Vercel Serverless
  * 
- * On Vercel (serverless), each request has its own httpServer context.
- * This means Socket.IO's normal approach of attaching to httpServer won't work well.
- * 
- * Instead, we create a shared Socket.IO instance via globalThis and handle
- * Socket.IO protocol requests directly in this handler.
+ * IMPORTANT: On Vercel, Socket.IO won't auto-attach to the httpServer via listeners.
+ * The handler must explicitly call Socket.IO's request handler.
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const httpServer = (res.socket as any)?.server;
-  
-  if (!httpServer) {
-    console.log("[Socket] No HTTP server available");
-    // Try to use cached instance if available
-    const cachedIO = getGlobalIO();
-    if (!cachedIO) {
-      return res.status(500).json({ error: "No server context" });
-    }
-  }
-
   try {
-    console.log(`[Socket] ${req.method} ${req.url}`);
+    const httpServer = (res.socket as any)?.server;
     
-    // Initialize or get Socket.IO instance
-    const io = httpServer ? getOrCreateSocketIO(httpServer) : getGlobalIO();
+    // Initialize Socket.IO
+    const io = httpServer 
+      ? getOrCreateSocketIO(httpServer)
+      : getGlobalIO();
     
     if (!io) {
-      console.log("[Socket] Failed to get Socket.IO instance");
-      return res.status(500).json({ error: "Socket.IO not available" });
+      console.log("[Socket] Socket.IO not initialized");
+      return res.status(503).json({ error: "Socket.IO not ready" });
     }
-    
+
     setGlobalIO(io);
 
-    // Socket.IO Engine handles requests with the engine middleware
-    // The Socket.IO instance already has handlers attached via the Server constructor
-    // Just return 200 OK - Socket.IO will have handled the real protocol work
+    // The critical fix: Socket.IO's engine has a request handler
+    // We need to explicitly call it instead of letting it auto-attach
+    // @ts-ignore - accessing private engine property
+    const engine = io.engine;
+    
+    if (engine && engine.handleRequest) {
+      // Let Socket.IO's engine handler process this request
+      console.log(`[Socket] Delegating to Socket.IO engine: ${req.method} ${req.url}`);
+      engine.handleRequest(req, res);
+      return;
+    }
+
+    // Fallback if engine handler not available
+    console.log("[Socket] Socket.IO engine handler not available");
     return res.status(200).json({ ready: true });
 
   } catch (error) {
     console.error("[Socket] Error:", error);
-    return res.status(500).json({ error: "Handler failed" });
+    return res.status(500).json({ error: String(error) });
   }
 }
