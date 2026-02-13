@@ -47,6 +47,12 @@ export default function HomePage() {
     console.log("🔌 Home page: Initializing socket with userId:", user?.userId);
     const socketInstance = initSocket(user?.userId);
 
+    // Only attach listeners if Socket.IO is available
+    if (!socketInstance) {
+      console.warn("⚠️  Socket.IO not available - real-time features disabled");
+      return;
+    }
+
     const handleConnect = () => {
       console.log("✅ Home page: Socket connected successfully");
     };

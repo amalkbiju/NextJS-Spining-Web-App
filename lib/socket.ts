@@ -11,8 +11,10 @@ let socket: Socket | null = null;
  *
  * For Local Development:
  * - Connects to localhost:3000
+ *
+ * Returns null if Socket.IO URL cannot be determined (app will work without Socket.IO)
  */
-function getSocketUrl(): string {
+function getSocketUrl(): string | null {
   // In browser environment
   if (typeof window !== "undefined") {
     // Production: Use external Socket.IO server URL
@@ -26,15 +28,16 @@ function getSocketUrl(): string {
     // Development: Check if connecting to custom server.js (port 3000)
     const currentUrl = `${window.location.protocol}//${window.location.host}`;
 
-    // If on Vercel production domain, must use external server
+    // If on Vercel production domain, warn but don't crash
     if (window.location.hostname.includes("vercel.app")) {
-      console.error(
-        "❌ NEXT_PUBLIC_SOCKET_URL not set. Socket.IO will not work on Vercel.",
+      console.warn(
+        "⚠️  NEXT_PUBLIC_SOCKET_URL not set on Vercel. Socket.IO features will not work.",
       );
-      console.error(
-        "Please set NEXT_PUBLIC_SOCKET_URL to your Socket.IO server URL",
+      console.warn(
+        "To fix: Add NEXT_PUBLIC_SOCKET_URL to Vercel environment variables",
       );
-      throw new Error("Socket.IO server URL not configured for production");
+      // Don't throw - let app continue to load, just without Socket.IO
+      return null;
     }
 
     // Local development
@@ -49,9 +52,9 @@ function getSocketUrl(): string {
 /**
  * Initialize Socket.IO connection
  * @param userId - The user's unique identifier
- * @returns Socket instance
+ * @returns Socket instance or null if Socket.IO is not configured
  */
-export function initSocket(userId?: string): Socket {
+export function initSocket(userId?: string): Socket | null {
   console.log(`🚀 initSocket() called with userId: ${userId}`);
 
   // Return existing socket if already exists
@@ -77,7 +80,13 @@ export function initSocket(userId?: string): Socket {
   console.log("🔌 Initializing Socket.IO client...");
 
   // Get the correct Socket.IO server URL
-  let socketUrl = getSocketUrl();
+  const socketUrl = getSocketUrl();
+
+  // If no socket URL available, Socket.IO is not configured
+  if (!socketUrl) {
+    console.warn("⚠️  Socket.IO not configured - app will work without real-time features");
+    return null;
+  }
 
   socket = io(socketUrl, {
     // For external servers, use default path
