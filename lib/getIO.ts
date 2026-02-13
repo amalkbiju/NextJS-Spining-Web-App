@@ -5,19 +5,36 @@ import type { NextApiRequest } from "next";
 const SOCKETIO_KEY = "__SOCKETIO_INSTANCE_V2__";
 
 export function getGlobalIO() {
-  const instance = (globalThis as any)[SOCKETIO_KEY];
+  // First try globalThis
+  let instance = (globalThis as any)[SOCKETIO_KEY];
   if (instance) {
     console.log("✅ getGlobalIO() - Found Socket.IO instance in globalThis");
     return instance;
   }
-  console.log("❌ getGlobalIO() - Socket.IO instance NOT in globalThis");
+
+  // Fallback: try to get from global object (sometimes works better in Node.js)
+  instance = (global as any)[SOCKETIO_KEY];
+  if (instance) {
+    console.log("✅ getGlobalIO() - Found Socket.IO instance in global");
+    // Also store in globalThis for consistency
+    (globalThis as any)[SOCKETIO_KEY] = instance;
+    return instance;
+  }
+
+  console.log(
+    "❌ getGlobalIO() - Socket.IO instance NOT in globalThis or global",
+  );
   return null;
 }
 
 export function setGlobalIO(io: any) {
   if (io) {
     console.log("🔧 setGlobalIO() - Storing Socket.IO instance");
+    // Store in both globalThis and global for maximum compatibility
     (globalThis as any)[SOCKETIO_KEY] = io;
+    (global as any)[SOCKETIO_KEY] = io;
+
+    // Verify storage
     const stored = (globalThis as any)[SOCKETIO_KEY];
     if (stored === io) {
       console.log(

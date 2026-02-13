@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import type { Socket as EngineSocket } from "engine.io";
 import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
 import { setGlobalIO, getGlobalIO } from "@/lib/getIO";
 
@@ -12,72 +11,79 @@ export const config = {
 /**
  * Socket.IO Handler for Next.js Pages API
  *
- * Handles all Socket.IO protocol requests and connects clients
+ * This route ensures Socket.IO is initialized on the HTTP server.
+ * Socket.IO handles all requests through its engine middleware,
+ * not directly through this handler.
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Log the full request details
   console.log(`[Socket] ${req.method} ${req.url}`);
 
   try {
     // Get the HTTP server that Next.js created
-    // The res.socket is an internal Node.js socket
-    // The res.socket.server is the internal Node.js HTTP server
-    const httpServer = (res as any).socket?.server;
+    const socket = (res as any).socket;
+    const httpServer = socket?.server;
 
     if (!httpServer) {
       console.error("[Socket] No httpServer available");
-      if (!res.headersSent) {
-        res.status(500);
-        res.end("No server");
-      }
-      return;
+      return res.status(500).json({ error: "No server" });
+    }
+
+    // Check if this is a valid Socket.IO request early
+    const hasEIO = req.query.EIO;
+    const isUpgradeRequest = req.headers.upgrade === "websocket";
+
+    // If no EIO and no upgrade request, this isn't a Socket.IO request
+    if (!hasEIO && !isUpgradeRequest && req.method === "GET") {
+      console.log(
+        "[Socket] Non-Socket.IO request, returning 426 Upgrade Required",
+      );
+      res.setHeader("Connection", "close");
+      return res.status(426).json({ error: "Upgrade Required" });
     }
 
     // Initialize Socket.IO (if not already done)
     let io = getGlobalIO();
     if (!io) {
-      try {
-        io = getOrCreateSocketIO(httpServer);
-        setGlobalIO(io);
-        console.log("[Socket] Socket.IO initialized successfully");
-      } catch (err) {
-        console.error("[Socket] Failed to initialize Socket.IO:", err);
-        if (!res.headersSent) {
-          res.status(500);
-          res.end("Init failed");
+      // Double-check: also look for it on the httpServer itself
+      io = httpServer.io;
+      if (!io) {
+        try {
+          io = getOrCreateSocketIO(httpServer);
+          setGlobalIO(io);
+          // Also store on httpServer for direct access
+          httpServer.io = io;
+          console.log("[Socket] Socket.IO initialized successfully");
+        } catch (err) {
+          console.error("[Socket] Failed to initialize Socket.IO:", err);
+          return res.status(500).json({ error: "Init failed" });
         }
-        return;
+      } else {
+        console.log(
+          "[Socket] Found Socket.IO on httpServer, restoring to globalThis",
+        );
+        setGlobalIO(io);
       }
     } else {
-      console.log("[Socket] Reusing existing Socket.IO instance");
+      // Ensure it's also on httpServer for redundancy
+      if (!httpServer.io) {
+        httpServer.io = io;
+      }
     }
 
-    // Verify Socket.IO instance has an engine
+    // Verify Socket.IO instance is ready
     if (!io || !io.engine) {
       console.error("[Socket] Socket.IO engine not ready");
-      if (!res.headersSent) {
-        res.status(503);
-        res.end("Socket.IO not ready");
-      }
-      return;
+      return res.status(503).json({ error: "Socket.IO not ready" });
     }
 
     console.log("[Socket] Delegating to Socket.IO engine");
-    console.log("[Socket] Request:", {
-      method: req.method,
-      url: req.url,
-      query: req.query,
-    });
 
     // Let Socket.IO engine handle the request
-    // The engine will handle the Socket.IO protocol (long-polling, websocket upgrade, etc.)
-    io.engine.handleRequest(req, res);
+    io.engine.handleRequest(req as any, res as any);
   } catch (error) {
     console.error("[Socket] Handler error:", error);
     if (!res.headersSent) {
-      res.status(500);
-      res.end("Internal error");
+      res.status(500).json({ error: "Internal error" });
     }
   }
 }
-

@@ -45,15 +45,15 @@ export function initSocket(userId?: string): Socket {
   socket = io(socketUrl, {
     path: "/api/socket",
     addTrailingSlash: false,
-    transports: ["websocket"], // ONLY use WebSocket, skip polling which returns 400
+    transports: ["polling"], // Use polling for Next.js Pages API compatibility
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionAttempts: 15,
+    reconnectionAttempts: 20, // Increased attempts for better resilience
     reconnectionDelayMax: 5000,
     forceNew: false,
     multiplex: true,
     randomizationFactor: 0.5,
-    timeout: 60000,
+    timeout: 10000, // Reduced timeout for faster failure detection
     withCredentials: false,
     extraHeaders: {
       "X-Client-Version": "socket.io-client/4.8.3",

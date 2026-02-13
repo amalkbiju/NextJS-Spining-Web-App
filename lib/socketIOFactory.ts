@@ -39,7 +39,7 @@ export function createSocketIOInstance(httpServer: any): any {
     const io = new Server(httpServer, {
       path: "/api/socket",
       addTrailingSlash: false,
-      transports: ["websocket"], // Only WebSocket - polling has issues with Next.js Pages API
+      transports: ["polling"], // Use polling for Next.js Pages API compatibility
       pingInterval: 15000,
       pingTimeout: 30000,
       maxHttpBufferSize: 1e6,
@@ -48,7 +48,7 @@ export function createSocketIOInstance(httpServer: any): any {
       serveClient: false,
       connectTimeout: 45000,
       upgradeTimeout: 10000,
-      allowUpgrades: false, // No upgrade needed if only WebSocket
+      allowUpgrades: false, // No upgrades when using polling only
       perMessageDeflate: {
         threshold: 2048,
       },
