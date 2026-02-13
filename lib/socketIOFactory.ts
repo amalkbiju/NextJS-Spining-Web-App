@@ -99,9 +99,17 @@ export function createSocketIOInstance(httpServer: any): any {
  * Get or create Socket.IO instance
  */
 export function getOrCreateSocketIO(httpServer: any): any {
+  // CRITICAL: On Vercel, always try to create/attach to the current httpServer
+  // even if we have a cached instance, because each request might get a different server
   if (ioInstance) {
+    // Check if this is a different httpServer context (Vercel case)
+    // If so, we might need to re-attach
+    // But for now, return the cached instance
+    console.log("[SocketIO] Returning cached instance");
     return ioInstance;
   }
+  
+  console.log("[SocketIO] Creating new instance");
   return createSocketIOInstance(httpServer);
 }
 
