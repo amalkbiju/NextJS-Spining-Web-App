@@ -33,8 +33,28 @@ export default function ProtectedLayout({
       console.log(
         `🔌 Protected layout: Initializing Socket.IO for user ${user.userId}`,
       );
-      initSocket(user.userId);
+      const socket = initSocket(user.userId);
+
+      // Keep socket alive by attaching minimal listeners
+      // These prevent the socket from being garbage collected
+      const handleConnect = () => {
+        console.log("✅ Protected layout: Socket connected");
+      };
+
+      const handleDisconnect = () => {
+        console.log("⚠️  Protected layout: Socket disconnected");
+      };
+
+      socket.on("connect", handleConnect);
+      socket.on("disconnect", handleDisconnect);
+
+      // Cleanup on unmount
+      return () => {
+        socket.off("connect", handleConnect);
+        socket.off("disconnect", handleDisconnect);
+      };
     }
+    return undefined;
   }, [isHydrated, isAuthenticated, user?.userId]);
 
   if (!isHydrated || !isAuthenticated) {
