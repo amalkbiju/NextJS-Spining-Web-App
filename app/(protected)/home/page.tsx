@@ -100,7 +100,9 @@ export default function HomePage() {
           // Check if room already exists to avoid duplicates
           const roomExists = prev.some((room) => room.roomId === data.roomId);
           if (roomExists) {
-            console.log(`⚠️  Room ${data.roomId} already exists, skipping duplicate`);
+            console.log(
+              `⚠️  Room ${data.roomId} already exists, skipping duplicate`,
+            );
             return prev;
           }
           return [
@@ -144,7 +146,7 @@ export default function HomePage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       let roomList = response.data.rooms || [];
-      
+
       // Deduplicate rooms by roomId to avoid duplicate key errors
       const uniqueRoomsMap = new Map<string, Room>();
       roomList.forEach((room: Room) => {
@@ -153,7 +155,7 @@ export default function HomePage() {
         }
       });
       const uniqueRooms = Array.from(uniqueRoomsMap.values());
-      
+
       setRooms(uniqueRooms);
       setFilteredRooms(uniqueRooms);
     } catch (err: any) {

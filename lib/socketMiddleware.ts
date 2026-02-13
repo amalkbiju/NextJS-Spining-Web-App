@@ -1,9 +1,9 @@
 /**
  * Socket.IO Server Middleware Hook
- * 
+ *
  * This file provides middleware integration that allows Socket.IO
  * to be initialized and attached to the Next.js httpServer.
- * 
+ *
  * The solution uses Node.js's `require` hook to intercept http.Server
  * creation and attach Socket.IO to it.
  */
@@ -89,7 +89,9 @@ export function attachSocketIOToServer(httpServer: any): any {
 
     // Store globally
     setGlobalIO(io);
-    console.log("[SocketMiddleware] Socket.IO successfully attached and stored");
+    console.log(
+      "[SocketMiddleware] Socket.IO successfully attached and stored",
+    );
 
     return io;
   } catch (error) {

@@ -1,6 +1,7 @@
 # 🚀 Socket.IO Fix - Quick Reference Card
 
 ## The Problem
+
 ```
 GET /api/socket → 400 Bad Request ❌
 (Production only - Vercel)
@@ -8,6 +9,7 @@ GET /api/socket → 400 Bad Request ❌
 ```
 
 ## The Solution
+
 ```
 Consolidate routes + Proper headers + Production timeouts
 ```
@@ -30,6 +32,7 @@ git push origin main
 ## Verify It Works
 
 1. **After deployment** (wait 3-5 min), go to:
+
    ```
    https://next-js-spining-web-app.vercel.app/login
    ```
@@ -37,11 +40,13 @@ git push origin main
 2. **Open DevTools** (F12) → **Network** tab
 
 3. **Look for `/api/socket` requests**
+
    ```
    ✅ Should see: 200 OK (not 400)
    ```
 
 4. **Check Console**
+
    ```
    ✅ Should see: "Socket.IO connected"
    ```
@@ -53,12 +58,12 @@ git push origin main
 
 ## What Changed
 
-| File | What | Why |
-|------|------|-----|
+| File                       | What     | Why                  |
+| -------------------------- | -------- | -------------------- |
 | `/app/api/socket/route.ts` | Enhanced | Added proper headers |
-| `/lib/socketIOFactory.ts` | Updated | Production timeouts |
-| `/lib/socket.ts` | Improved | Better reconnection |
-| `/pages/api/socket.ts` | Deleted | Removed conflict |
+| `/lib/socketIOFactory.ts`  | Updated  | Production timeouts  |
+| `/lib/socket.ts`           | Improved | Better reconnection  |
+| `/pages/api/socket.ts`     | Deleted  | Removed conflict     |
 
 ## Key Improvements
 
@@ -81,6 +86,7 @@ git push origin main
 ## If Something Goes Wrong
 
 ### Still Seeing 400?
+
 ```bash
 # Clear browser cache
 Cmd + Shift + Delete (DevTools)
@@ -89,6 +95,7 @@ Cmd + Shift + R
 ```
 
 ### Need to Rollback?
+
 ```bash
 git revert <commit-hash>
 git push origin main
@@ -98,6 +105,7 @@ git push origin main
 ## Documentation
 
 Read these for more info:
+
 1. `README_SOCKET_IO_FIX.md` - Quick overview
 2. `SOCKET_IO_FIX_COMPLETE.md` - Full guide
 3. `DEPLOY_NOW.md` - Detailed deployment

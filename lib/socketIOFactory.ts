@@ -132,4 +132,3 @@ export function getSocketIO(): any {
 }
 
 export { userSockets };
-

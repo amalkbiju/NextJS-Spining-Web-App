@@ -3,6 +3,7 @@
 ## Problem Analysis
 
 **Symptoms:**
+
 - GET request to `/api/socket` returns `400 Bad Request` in production (Vercel)
 - Works perfectly locally
 - The issue appears when Socket.IO client tries to connect
@@ -15,14 +16,18 @@ The application was missing proper Socket.IO route handlers in the App Router. W
 The fix involves three key components:
 
 ### 1. **App Router Route Handler** (`/app/api/socket/route.ts`)
+
 Created a proper Next.js App Router route handler that:
+
 - Accepts GET, POST, and OPTIONS requests
 - Sets proper CORS headers for Socket.IO
 - Returns `200 OK` to acknowledge requests
 - Works alongside the Pages API for redundancy
 
 ### 2. **Enhanced Pages API Handler** (`/pages/api/socket.ts`)
+
 Updated the Pages API handler to:
+
 - Better log and error handling
 - Verify httpServer availability
 - Properly initialize Socket.IO with the underlying httpServer
@@ -30,14 +35,18 @@ Updated the Pages API handler to:
 - Return proper status codes with clear error messages
 
 ### 3. **Improved Socket.IO Factory** (`/lib/socketIOFactory.ts`)
+
 Updated the initialization to:
+
 - Add production optimizations (serveClient: false)
 - Increase connection timeouts for Vercel cold starts
 - Better error handling and logging
 - Add connection and error event listeners
 
 ### 4. **Enhanced Client-Side Socket** (`/lib/socket.ts`)
+
 Updated client initialization to:
+
 - Increase reconnection attempts (15 instead of 10)
 - Longer reconnection timeouts (5s max)
 - Better timeout handling for Vercel latency
@@ -92,6 +101,7 @@ Updated client initialization to:
 ## Key Differences from Before
 
 ### Before (Not Working)
+
 - Only Pages API route at `/pages/api/socket`
 - No App Router route handler
 - Route handlers tried to directly process Socket.IO protocol
@@ -99,6 +109,7 @@ Updated client initialization to:
 - Shorter timeouts caused failures on cold starts
 
 ### After (Fixed)
+
 - ✅ Both Pages API and App Router routes
 - ✅ Route handlers just acknowledge requests (return 200 OK)
 - ✅ Socket.IO middleware handles actual protocol work
@@ -121,6 +132,7 @@ Updated client initialization to:
 ## Testing the Fix
 
 ### Local Testing
+
 ```bash
 npm run dev
 # Test login flow
@@ -129,6 +141,7 @@ npm run dev
 ```
 
 ### Production Testing (Vercel)
+
 1. Deploy to Vercel
 2. Open login page at `https://next-js-spining-web-app.vercel.app/login`
 3. Check Network tab:
@@ -143,18 +156,21 @@ npm run dev
 ## Troubleshooting
 
 ### Still Getting 400 Bad Request?
+
 1. Clear browser cache and cookies
 2. Hard refresh (Cmd+Shift+R on Mac)
 3. Check Vercel Function logs for Socket.IO errors
 4. Verify environment variables are set
 
 ### Socket.IO shows "connection" but no "connect" event?
+
 - Socket is connecting but not completing handshake
 - Check for errors in browser console
 - Verify user-join event is being emitted
 - Check server logs for any rejection logic
 
 ### Frequent reconnections?
+
 - Check network tab for failed requests
 - Verify CORS headers are present
 - Check for firewall/proxy blocking WebSocket upgrades

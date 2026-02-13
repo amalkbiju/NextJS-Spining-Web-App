@@ -10,7 +10,7 @@ Developer tries this:
     - Receives GET /api/socket
     - Tries to process Socket.IO protocol in the handler
     - Returns custom response
-    
+
 Result: 400 Bad Request (Socket.IO expects different handling)
 ```
 
@@ -89,13 +89,13 @@ SERVER → CLIENT (Response):
   HTTP/1.1 200 OK
   Connection: keep-alive
   Transfer-Encoding: chunked
-  
+
   2         ← PING packet
   3probe    ← Probe WebSocket upgrade
-  
+
 CLIENT → SERVER (Response to Probe):
   GET /api/socket?EIO=4&transport=polling&sid=abc123&t=789012
-  
+
   3          ← Probe response
   [No more polling, upgrade to WebSocket]
 ```
@@ -112,7 +112,7 @@ SERVER:
   101 Switching Protocols
   Upgrade: websocket
   Connection: Upgrade
-  
+
 → Persistent bidirectional connection established
 ```
 
@@ -125,16 +125,16 @@ const headers = {
   // 1. CORS - Allow cross-origin requests
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  
+
   // 2. Connection - Tell client to reuse connection
-  "Connection": "keep-alive",
-  
+  Connection: "keep-alive",
+
   // 3. Transfer-Encoding - Allow chunked responses
   "Transfer-Encoding": "chunked",
-  
+
   // 4. Cache - Prevent caching of dynamic content
   "Cache-Control": "no-cache, no-store, must-revalidate",
-  
+
   // 5. Content Type - Data format
   "Content-Type": "application/json",
 };
@@ -142,13 +142,13 @@ const headers = {
 
 ### Why Each Header Matters
 
-| Header | Purpose | Socket.IO Need |
-|--------|---------|----------------|
-| `Connection: keep-alive` | Reuse TCP connection | Critical for polling efficiency |
-| `Transfer-Encoding: chunked` | Send data in parts | Allows realtime updates |
-| `Cache-Control: no-cache` | Don't cache response | Must see fresh data |
-| `Content-Type: application/json` | Data format | Protocol parsing |
-| CORS headers | Cross-origin allowed | Client-server communication |
+| Header                           | Purpose              | Socket.IO Need                  |
+| -------------------------------- | -------------------- | ------------------------------- |
+| `Connection: keep-alive`         | Reuse TCP connection | Critical for polling efficiency |
+| `Transfer-Encoding: chunked`     | Send data in parts   | Allows realtime updates         |
+| `Cache-Control: no-cache`        | Don't cache response | Must see fresh data             |
+| `Content-Type: application/json` | Data format          | Protocol parsing                |
+| CORS headers                     | Cross-origin allowed | Client-server communication     |
 
 ## Vercel-Specific Considerations
 
@@ -165,7 +165,7 @@ Vercel Serverless:
   Destroyed after timeout (~5-15s)
   New request = new instance (sometimes)
   Socket.IO needs to reinitialize
-  
+
 Solution: Increase timeouts significantly
   - Client: Wait 60s instead of 10s
   - Server: 45s connection timeout
@@ -177,19 +177,19 @@ Solution: Increase timeouts significantly
 ```typescript
 // Client-side (lib/socket.ts)
 socket = io(socketUrl, {
-  transports: ["polling", "websocket"],  // Try polling first on Vercel
-  reconnectionAttempts: 15,              // More attempts
-  reconnectionDelayMax: 5000,            // Wait up to 5s
-  timeout: 60000,                        // 60s total timeout
-  rememberUpgrade: true,                 // Remember if WebSocket worked
+  transports: ["polling", "websocket"], // Try polling first on Vercel
+  reconnectionAttempts: 15, // More attempts
+  reconnectionDelayMax: 5000, // Wait up to 5s
+  timeout: 60000, // 60s total timeout
+  rememberUpgrade: true, // Remember if WebSocket worked
 });
 
 // Server-side (lib/socketIOFactory.ts)
 const io = new Server(httpServer, {
-  connectTimeout: 45000,    // 45s for cold start
-  upgradeTimeout: 10000,    // 10s to try WebSocket
-  pingInterval: 25000,      // Send ping every 25s
-  pingTimeout: 60000,       // Wait 60s for pong
+  connectTimeout: 45000, // 45s for cold start
+  upgradeTimeout: 10000, // 10s to try WebSocket
+  pingInterval: 25000, // Send ping every 25s
+  pingTimeout: 60000, // Wait 60s for pong
   transports: ["polling", "websocket"],
 });
 ```
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
   // - Can't maintain persistent state
   // - Can't intercept future requests
   // - Each request is isolated
-  
+
   return new NextResponse("...");
 }
 ```
@@ -314,6 +314,7 @@ T+300ms: Game ready
 ### Scenario 1: Client Gives Up Too Early
 
 **Before:**
+
 ```
 Attempt 1: ECONNREFUSED (cold start)
 Wait 1s
@@ -324,6 +325,7 @@ Attempt 3: 400 Bad Request ← Gives up here (10 attempts max)
 ```
 
 **After:**
+
 ```
 Attempt 1: ECONNREFUSED (cold start)
 Wait 1s
@@ -340,6 +342,7 @@ Attempt 15: CONNECTED ✅
 ### Scenario 2: WebSocket Upgrade Fails
 
 **Graceful Fallback:**
+
 ```
 Polling Connection: ESTABLISHED ✅
 Try WebSocket Upgrade: FAILED (blocked by firewall)
@@ -350,6 +353,7 @@ Stay on Polling: Slower but FUNCTIONAL ✅
 ### Scenario 3: Network Interruption
 
 **Auto-Reconnect:**
+
 ```
 Connection: LOST
 Wait 1s
@@ -363,13 +367,13 @@ Reconnect Attempt 3: SUCCESS ✅
 
 ## Performance Implications
 
-| Metric | Polling | WebSocket | Impact |
-|--------|---------|-----------|--------|
-| Requests/sec | 2-3 | 0 (persistent) | Polling uses bandwidth |
-| Latency | 500-1000ms | <100ms | WebSocket much faster |
-| CPU Usage | Moderate | Low | Polling has overhead |
-| Battery (mobile) | High | Low | WebSocket preferred for mobile |
-| Behind Proxy | Always works | Sometimes fails | Polling is fallback |
+| Metric           | Polling      | WebSocket       | Impact                         |
+| ---------------- | ------------ | --------------- | ------------------------------ |
+| Requests/sec     | 2-3          | 0 (persistent)  | Polling uses bandwidth         |
+| Latency          | 500-1000ms   | <100ms          | WebSocket much faster          |
+| CPU Usage        | Moderate     | Low             | Polling has overhead           |
+| Battery (mobile) | High         | Low             | WebSocket preferred for mobile |
+| Behind Proxy     | Always works | Sometimes fails | Polling is fallback            |
 
 ## Testing the Fix
 

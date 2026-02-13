@@ -1,13 +1,13 @@
 /**
  * Custom Next.js Server with Socket.IO
- * 
+ *
  * This server wraps Next.js with Socket.IO support for local development.
  * Socket.IO is initialized before any requests are handled.
- * 
+ *
  * To use this:
  * - Update package.json script from "next dev" to "node server.js"
  * - Or create a new script: "dev:custom": "node server.js"
- * 
+ *
  * For Vercel:
  * - The serverless functions will initialize Socket.IO on first request
  * - No changes needed for production
@@ -40,15 +40,21 @@ app.prepare().then(() => {
   });
 
   // Store httpServer in globalThis so routes can access it for Socket.IO
-  console.log("📦 Storing httpServer in globalThis for Socket.IO initialization");
+  console.log(
+    "📦 Storing httpServer in globalThis for Socket.IO initialization",
+  );
   global.__httpServer__ = httpServer;
 
   // Initialize Socket.IO on the server
   console.log("🔌 Initializing Socket.IO on custom server...");
   try {
-    const socketIOFactoryPath = path.join(__dirname, "lib", "socketIOFactory.js");
+    const socketIOFactoryPath = path.join(
+      __dirname,
+      "lib",
+      "socketIOFactory.js",
+    );
     const getIOPath = path.join(__dirname, "lib", "getIO.js");
-    
+
     const { getOrCreateSocketIO } = require(socketIOFactoryPath);
     const { setGlobalIO } = require(getIOPath);
 
@@ -61,8 +67,6 @@ app.prepare().then(() => {
 
   // Start the server
   httpServer.listen(port, hostname, () => {
-    console.log(
-      `✓ Server ready at http://${hostname}:${port} with Socket.IO`,
-    );
+    console.log(`✓ Server ready at http://${hostname}:${port} with Socket.IO`);
   });
 });

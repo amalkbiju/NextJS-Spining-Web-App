@@ -1,18 +1,22 @@
 # Socket Invitation Alert Fix
 
 ## Problem Statement
+
 When User A creates a room and invites User B by their ID, User B does **NOT receive** the socket popup alert for the invitation, even if they're logged in.
 
 ## Root Cause
-**Socket.IO was not initialized at the protected layout level.** 
+
+**Socket.IO was not initialized at the protected layout level.**
 
 The socket connection was only being established when users navigated to the home page. This meant:
+
 - User B logs in → gets redirected to `/home` but hasn't loaded the page yet
 - User A invites User B → tries to emit `user-invited` event to User B
 - But User B's Socket.IO hasn't initialized yet → no socket in `user-{userId}` room
 - Result: Invitation alert never reaches User B
 
 ## Solution Implemented
+
 **Initialize Socket.IO in the Protected Layout** (`/app/(protected)/layout.tsx`)
 
 This ensures that Socket.IO is initialized **immediately after authentication**, before the user navigates to any page.
@@ -20,6 +24,7 @@ This ensures that Socket.IO is initialized **immediately after authentication**,
 ### Changes Made
 
 #### 1. Protected Layout - Early Socket Initialization
+
 **File**: `/app/(protected)/layout.tsx`
 
 ```typescript
@@ -51,15 +56,18 @@ export default function ProtectedLayout({
 ```
 
 **Why this works:**
+
 - The protected layout wraps ALL protected pages
 - It loads before the user navigates to any page
 - Socket connection is established immediately after `user?.userId` is available
 - User B's socket will be ready to receive events within milliseconds of authentication
 
 #### 2. Enhanced emitToUser Retry Logic
+
 **File**: `/lib/socketServer.ts`
 
 Improved retry mechanism for better reliability:
+
 - Increased retry attempts from **3 → 5**
 - Increased retry delays: `300ms, 600ms, 900ms, 1200ms, 1500ms`
 - Added warning when no sockets are connected to a user room
@@ -69,11 +77,11 @@ export async function emitToUser(
   userId: string,
   eventName: string,
   data: any,
-  retries = 5,  // ← Increased from 3
+  retries = 5, // ← Increased from 3
   req?: any,
 ) {
   // ... retry logic with longer delays ...
-  
+
   if (socketsCount === 0) {
     console.warn(
       `⚠️  No sockets connected to room '${targetRoom}' - user ${userId} may not be online`,
@@ -83,6 +91,7 @@ export async function emitToUser(
 ```
 
 **Why this helps:**
+
 - Gives Socket.IO more time to initialize even in slow environments
 - Better diagnostics to identify when users are offline
 - More reliable event delivery for Edge cases
@@ -92,6 +101,7 @@ export async function emitToUser(
 ### Scenario: User A Invites User B
 
 **Timeline:**
+
 ```
 1. User B logs in
    ↓
@@ -115,16 +125,19 @@ export async function emitToUser(
 ## Key Points
 
 ### What Gets Fixed
+
 ✅ User B receives invitation alerts **immediately** after being invited  
 ✅ Works even if User B is on any protected page (not just home)  
-✅ More reliable event delivery with enhanced retry logic  
+✅ More reliable event delivery with enhanced retry logic
 
 ### What Stays the Same
+
 - Socket initialization on individual pages (home, room) still works as before
 - All existing socket events continue to function normally
 - No breaking changes to the API
 
 ### Why This Is The Right Fix
+
 1. **Minimal Changes** - Only 2 files modified
 2. **Works For All Pages** - Socket ready on protected layout, not just specific pages
 3. **Backward Compatible** - Existing socket initialization on individual pages still works
@@ -154,6 +167,7 @@ export async function emitToUser(
 ## Browser Console Output Expected
 
 ### On Protected Layout Load
+
 ```
 🔌 Protected layout: Initializing Socket.IO for user USER_1769329764644_9kztxbwew
 ✅ Socket.IO connected: fxW-ZHklN8_CzUWdAAAH
@@ -162,6 +176,7 @@ export async function emitToUser(
 ```
 
 ### When Invitation Arrives
+
 ```
 📨 Home page received 'user-invited' event: {
   roomId: 'ROOM_1770966052939_0b9i75wrh',
@@ -172,9 +187,11 @@ export async function emitToUser(
 ```
 
 ## Deployment
+
 - Changes have been committed and pushed to GitHub
 - Vercel will auto-deploy on main branch
 - No environment variable changes needed
 
 ## Summary
+
 By initializing Socket.IO in the protected layout instead of waiting for individual pages to load, we ensure that all authenticated users are ready to receive socket events immediately. This solves the problem where User B wouldn't receive invitation alerts because their socket hadn't connected yet.

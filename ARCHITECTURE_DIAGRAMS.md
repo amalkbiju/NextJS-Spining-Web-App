@@ -241,7 +241,7 @@ Attempt 4: [TIMEOUT]           ────────────────�
 ...
 
 Attempt 10: [TIMEOUT]          ────────────────────► GIVE UP ❌
-            
+
 Total wait: ~55 seconds
 But Vercel cold start needs: ~10s
 Result: ❌ Failed connections on cold starts
@@ -263,9 +263,9 @@ Attempt 2: [TIMEOUT]           ────────────────�
 
 Attempt 3: [Connection established] ───────────────► ✅ SUCCESS!
            (cold start complete, Socket.IO ready)
-           
+
            Total wait: ~8 seconds
-           
+
 Server initialization: ~5-10 seconds
 Client timeout: 60 seconds
 Result: ✅ Reliable connections even on cold starts
@@ -348,7 +348,7 @@ OUR SOLUTION (Best of Both)
 2. Attempt WebSocket Upgrade
    - If available: Use it ✅ (fast)
    - If blocked: Stay on polling ✅ (still works)
-   
+
 3. Remember preference
    - Next connection: Try same transport
    - Faster reconnection
