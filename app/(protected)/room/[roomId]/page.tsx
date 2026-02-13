@@ -8,7 +8,6 @@ import { initSocket, onEvent, offEvent, emitEvent } from "@/lib/socket";
 import { Room } from "@/types";
 import SpinningWheel from "@/components/room/SpinningWheel";
 import InviteModal from "@/components/room/InviteModal";
-import InvitationNotifications from "@/components/room/InvitationNotifications";
 import {
   ArrowLeft,
   Copy,
@@ -50,6 +49,10 @@ export default function RoomPage() {
   const [addingUser, setAddingUser] = useState(false);
   const [invitingEmail, setInvitingEmail] = useState(false);
   const [leavingRoom, setLeavingRoom] = useState(false);
+  const [userJoinAlert, setUserJoinAlert] = useState<{
+    name: string;
+    visible: boolean;
+  }>({ name: "", visible: false });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -76,7 +79,18 @@ export default function RoomPage() {
       setSelectedWinner(null);
       setFinalRotation(null);
     };
-    const handleUserJoinedRoom = (data: any) => setRoom(data.room);
+    const handleUserJoinedRoom = (data: any) => {
+      console.log("👤 User joined room event received:", data);
+      setRoom(data.room);
+      // Show join alert
+      if (data.joinedUser?.name) {
+        setUserJoinAlert({ name: data.joinedUser.name, visible: true });
+        // Auto-hide alert after 4 seconds
+        setTimeout(() => {
+          setUserJoinAlert({ name: "", visible: false });
+        }, 4000);
+      }
+    };
 
     onEvent("room-updated", handleRoomUpdate);
     onEvent("spin-start", handleSpinStart);
@@ -357,6 +371,31 @@ export default function RoomPage() {
           }}
         />
       </div>
+
+      {userJoinAlert.visible && (
+        <div
+          style={{
+            position: "fixed",
+            top: "2rem",
+            right: "2rem",
+            zIndex: 50,
+            backgroundColor: "rgba(34, 197, 94, 0.9)",
+            color: "white",
+            padding: "1rem 1.5rem",
+            borderRadius: "0.5rem",
+            boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            animation: "slideIn 0.3s ease-out",
+          }}
+        >
+          <CheckCircle2 size={20} />
+          <span style={{ fontWeight: 500 }}>
+            {userJoinAlert.name} joined the room!
+          </span>
+        </div>
+      )}
 
       <div
         style={{
@@ -1103,7 +1142,6 @@ export default function RoomPage() {
         onClose={() => {}}
         onSuccess={() => fetchRoom()}
       />
-      <InvitationNotifications />
 
       <style jsx>{`
         @keyframes fadeIn {
@@ -1114,6 +1152,16 @@ export default function RoomPage() {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(400px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
           }
         }
         @keyframes pulse {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
+import InvitationNotifications from "@/components/room/InvitationNotifications";
 
 export default function ProtectedLayout({
   children,
@@ -28,5 +29,10 @@ export default function ProtectedLayout({
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <InvitationNotifications />
+      {children}
+    </>
+  );
 }
