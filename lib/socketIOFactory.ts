@@ -70,7 +70,9 @@ export function createSocketIOInstance(httpServer: any): any {
           `✓ User ${userId} joined room 'user-${userId}' with socket ${socket.id}`,
           {
             totalUsersTracked: userSockets.size,
-            usersInRoom: Array.from(io.sockets.adapter.rooms.get(`user-${userId}`) || []),
+            usersInRoom: Array.from(
+              io.sockets.adapter.rooms.get(`user-${userId}`) || [],
+            ),
           },
         );
 

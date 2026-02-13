@@ -145,9 +145,18 @@ export async function PUT(
           email: currentUser?.email,
         },
       };
-      console.log(`📨 About to emit user-invited with data:`, JSON.stringify(invitationData, null, 2));
-      const emitResult = await emitToUser(oppositeUser.userId, "user-invited", invitationData);
-      console.log(`✓ Invitation emitted to user ${oppositeUser.userId}, result: ${emitResult}`);
+      console.log(
+        `📨 About to emit user-invited with data:`,
+        JSON.stringify(invitationData, null, 2),
+      );
+      const emitResult = await emitToUser(
+        oppositeUser.userId,
+        "user-invited",
+        invitationData,
+      );
+      console.log(
+        `✓ Invitation emitted to user ${oppositeUser.userId}, result: ${emitResult}`,
+      );
     } catch (socketError: any) {
       console.error("Failed to emit socket event:", socketError.message);
       // Don't fail the API response if socket emission fails
