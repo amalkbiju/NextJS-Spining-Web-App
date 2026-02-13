@@ -48,7 +48,7 @@ export default function ProtectedLayout({
       // Add listeners that will keep socket alive
       socket.on("connect", handleConnect);
       socket.on("disconnect", handleDisconnect);
-      
+
       // Add a catch-all listener for any events to keep socket active
       socket.onAny((eventName, ...args) => {
         console.log(`📨 Socket event received: ${eventName}`);

@@ -14,7 +14,7 @@ export function initSocket(userId?: string): Socket {
       connected: socket.connected,
       id: socket.id,
     });
-    
+
     // If socket exists but not connected, ensure user-join is emitted once connected
     if (!socket.connected) {
       socket.once("connect", () => {
@@ -24,7 +24,7 @@ export function initSocket(userId?: string): Socket {
         }
       });
     }
-    
+
     return socket;
   }
 

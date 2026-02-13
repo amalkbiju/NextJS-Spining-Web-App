@@ -14,7 +14,9 @@ export const config = {
  * Handles all Socket.IO protocol requests and connects clients
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log(`[Socket] ${req.method} ${req.url}`);
+  console.log(`[Socket] ${req.method} ${req.url}`, {
+    query: req.url?.split("?")[1],
+  });
 
   try {
     // Get the HTTP server that Next.js created
@@ -31,28 +33,36 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       try {
         io = getOrCreateSocketIO(httpServer);
         setGlobalIO(io);
-        console.log("[Socket] Socket.IO initialized");
+        console.log("[Socket] Socket.IO initialized successfully");
       } catch (err) {
-        console.error("[Socket] Failed to initialize:", err);
+        console.error("[Socket] Failed to initialize Socket.IO:", err);
         return res.status(500).json({ error: "Init failed" });
       }
+    } else {
+      console.log("[Socket] Reusing existing Socket.IO instance");
     }
 
-    // Critical: Use Socket.IO's engine to handle the actual protocol
-    // This method is defined on the Socket.IO server and handles:
-    // - HTTP long-polling
-    // - WebSocket upgrades
-    // - Protocol negotiation
-    if (io && io.engine && typeof io.engine.handleRequest === "function") {
-      console.log("[Socket] Delegating to Socket.IO engine");
-      io.engine.handleRequest(req, res);
+    // Handle the Socket.IO request via the engine
+    if (io && io.engine) {
+      console.log("[Socket] Passing request to Socket.IO engine");
+      try {
+        // Socket.IO engine will handle HTTP long-polling and WebSocket upgrade
+        io.engine.handleRequest(req, res);
+        console.log("[Socket] Request handled by Socket.IO engine");
+      } catch (engineError) {
+        console.error("[Socket] Socket.IO engine error:", engineError);
+        if (!res.headersSent) {
+          return res.status(500).json({ error: "Engine error" });
+        }
+      }
     } else {
-      // Fallback if engine is not available
-      console.log("[Socket] Socket.IO engine not ready");
-      res.status(503).json({ error: "Socket.IO not ready" });
+      console.error("[Socket] Socket.IO engine not available");
+      if (!res.headersSent) {
+        return res.status(503).json({ error: "Socket.IO not ready" });
+      }
     }
   } catch (error) {
-    console.error("[Socket] Error:", error);
+    console.error("[Socket] Handler error:", error);
     if (!res.headersSent) {
       res.status(500).json({ error: "Internal error" });
     }
