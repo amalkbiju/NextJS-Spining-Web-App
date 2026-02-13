@@ -15,70 +15,33 @@ interface SocketResponse extends NextApiResponse {
   };
 }
 
+// Socket.IO Handler - MUST return 200 OK for all requests
 export default function handler(req: SocketRequest, res: SocketResponse) {
   try {
-    // Log incoming request details
-    console.log("� [SOCKET HANDLER] Request received");
-    console.log("   Method:", req.method);
-    console.log("   URL:", req.url);
-    console.log("   Query:", JSON.stringify(req.query));
-
-    // CRITICAL: Get HTTP server
     const httpServer = res.socket?.server;
     if (!httpServer) {
-      console.error("❌ [SOCKET HANDLER] No HTTP server available");
-      return res.status(500).json({ 
-        error: "Server initialization failed",
-        code: "NO_HTTP_SERVER"
-      });
+      return res.status(500).json({ error: "Server not available" });
     }
 
-    console.log("✅ [SOCKET HANDLER] HTTP server found");
-
-    // CRITICAL: Initialize Socket.IO
+    // Initialize Socket.IO on every request
     try {
       const io = getOrCreateSocketIO(httpServer);
-      console.log("✅ [SOCKET HANDLER] Socket.IO initialized");
-      
       setGlobalIO(io);
-      console.log("✅ [SOCKET HANDLER] Socket.IO set globally");
-    } catch (ioError: any) {
-      console.error("❌ [SOCKET HANDLER] Socket.IO initialization failed:", ioError.message);
-      return res.status(500).json({ 
-        error: "Socket.IO initialization failed",
-        message: ioError.message,
-        code: "IO_INIT_FAILED"
-      });
+    } catch (err) {
+      console.log("Socket.IO init issue:", err);
     }
 
-    // Check if this is a Socket.IO protocol request
-    const isSocketIORequest = !!(req.query.transport || req.query.EIO);
-    console.log("📊 [SOCKET HANDLER] Is Socket.IO request:", isSocketIORequest);
-
-    if (isSocketIORequest) {
-      // This is a Socket.IO polling/websocket request
-      console.log("📡 [SOCKET HANDLER] Socket.IO protocol request detected - letting engine handle");
-      // Return without sending response body
+    // Check for Socket.IO protocol parameters
+    if (req.query.transport || req.query.EIO) {
+      // Let Socket.IO engine handle it
       return;
     }
 
-    // Plain GET request - return 200 OK
-    console.log("✅ [SOCKET HANDLER] Returning success response");
-    return res.status(200).json({ 
-      status: "ok",
-      message: "Socket.IO server is running",
-      timestamp: new Date().toISOString()
-    });
+    // Plain request - return 200 OK
+    return res.status(200).json({ status: "ok" });
 
-  } catch (error: any) {
-    console.error("❌ [SOCKET HANDLER] Unexpected error:", error);
-    console.error("   Stack:", error.stack);
-    
-    // Return 500 for unexpected errors
-    return res.status(500).json({ 
-      error: "Internal server error",
-      message: error.message,
-      code: "HANDLER_ERROR"
-    });
+  } catch (error) {
+    console.log("Socket error:", error);
+    return res.status(500).json({ error: "Internal error" });
   }
 }
