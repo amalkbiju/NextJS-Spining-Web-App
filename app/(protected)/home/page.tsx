@@ -1034,7 +1034,7 @@ export default function HomePage() {
                     >
                       {filteredRooms.map((room) => (
                         <button
-                          key={room._id}
+                          key={room.roomId}
                           onClick={() => handleSelectRoom(room.roomId)}
                           style={{
                             width: "100%",

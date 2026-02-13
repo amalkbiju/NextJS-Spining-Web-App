@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
 import InvitationNotifications from "@/components/room/InvitationNotifications";
+import { initSocket } from "@/lib/socket";
 
 export default function ProtectedLayout({
   children,
@@ -11,7 +12,7 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, hydrate } = useAuthStore();
+  const { isAuthenticated, hydrate, user } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -24,6 +25,17 @@ export default function ProtectedLayout({
       router.push("/login");
     }
   }, [isHydrated, isAuthenticated, router]);
+
+  // Initialize Socket.IO as soon as user is authenticated
+  // This ensures we're ready to receive invitation alerts immediately
+  useEffect(() => {
+    if (isHydrated && isAuthenticated && user?.userId) {
+      console.log(
+        `🔌 Protected layout: Initializing Socket.IO for user ${user.userId}`,
+      );
+      initSocket(user.userId);
+    }
+  }, [isHydrated, isAuthenticated, user?.userId]);
 
   if (!isHydrated || !isAuthenticated) {
     return null;

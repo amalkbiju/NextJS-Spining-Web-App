@@ -43,7 +43,7 @@ export async function emitToUser(
   userId: string,
   eventName: string,
   data: any,
-  retries = 3,
+  retries = 5,
   req?: any,
 ) {
   console.log(
@@ -53,15 +53,15 @@ export async function emitToUser(
   let io = getIO(req);
 
   // If not available on first try, wait a moment and retry
-  if (!io && retries === 3) {
+  if (!io && retries === 5) {
     console.log(`🔌 Socket.IO not found on first attempt, retrying...`);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     io = getIO(req);
   }
 
   // If still not available, try retrying with delays
   if (!io && retries > 0) {
-    const retryDelay = 200 * (4 - retries); // Increasing delay: 200ms, 400ms, 600ms
+    const retryDelay = 300 * (6 - retries); // Increasing delay: 300ms, 600ms, 900ms, 1200ms, 1500ms
     console.warn(
       `⚠️  Socket.IO not ready for '${eventName}', retrying in ${retryDelay}ms (${retries} left)`,
     );
@@ -85,6 +85,12 @@ export async function emitToUser(
     console.log(
       `📤 Emitting '${eventName}' to room '${targetRoom}' for user ${userId} (${socketsCount} socket(s) connected)`,
     );
+
+    if (socketsCount === 0) {
+      console.warn(
+        `⚠️  No sockets connected to room '${targetRoom}' - user ${userId} may not be online`,
+      );
+    }
 
     io.to(targetRoom).emit(eventName, data);
     console.log(
