@@ -84,7 +84,9 @@ export function initSocket(userId?: string): Socket | null {
 
   // If no socket URL available, Socket.IO is not configured
   if (!socketUrl) {
-    console.warn("⚠️  Socket.IO not configured - app will work without real-time features");
+    console.warn(
+      "⚠️  Socket.IO not configured - app will work without real-time features",
+    );
     return null;
   }
 
