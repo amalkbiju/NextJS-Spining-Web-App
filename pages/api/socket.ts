@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
-import { setGlobalIO } from "@/lib/getIO";
+import { setGlobalIO, getGlobalIO } from "@/lib/getIO";
 
 export const config = {
   api: {
@@ -11,39 +11,46 @@ export const config = {
 /**
  * Socket.IO Handler for Next.js Pages API
  *
- * This handler initializes Socket.IO and then immediately returns.
- * Socket.IO's HTTP listener on the server is responsible for handling
- * the actual protocol requests.
- *
- * When using custom server (server.js):
- * - Socket.IO is initialized before requests arrive
- * - This handler just ensures Socket.IO is ready
- *
- * When using next start:
- * - This handler initializes Socket.IO on first request
- * - Subsequent requests are handled by Socket.IO's server listener
+ * Handles all Socket.IO protocol requests and connects clients
  */
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log(`[Socket] ${req.method} ${req.url}`);
 
   try {
+    // Get the HTTP server that Next.js created
     const httpServer = (res.socket as any)?.server;
 
-    if (httpServer) {
+    if (!httpServer) {
+      console.error("[Socket] No httpServer available");
+      return res.status(500).json({ error: "No server" });
+    }
+
+    // Initialize Socket.IO (if not already done)
+    let io = getGlobalIO();
+    if (!io) {
       try {
-        const io = getOrCreateSocketIO(httpServer);
+        io = getOrCreateSocketIO(httpServer);
         setGlobalIO(io);
         console.log("[Socket] Socket.IO initialized");
       } catch (err) {
-        console.error("[Socket] Failed to initialize Socket.IO:", err);
+        console.error("[Socket] Failed to initialize:", err);
+        return res.status(500).json({ error: "Init failed" });
       }
     }
 
-    // CRITICAL: Just return without sending a response
-    // Socket.IO's server listener handles the actual protocol communication
-    // Sending a response here would conflict with Socket.IO's protocol handling
-    console.log("[Socket] Handler returning - Socket.IO server listener will handle this");
-    return;
+    // Critical: Use Socket.IO's engine to handle the actual protocol
+    // This method is defined on the Socket.IO server and handles:
+    // - HTTP long-polling
+    // - WebSocket upgrades
+    // - Protocol negotiation
+    if (io && io.engine && typeof io.engine.handleRequest === "function") {
+      console.log("[Socket] Delegating to Socket.IO engine");
+      io.engine.handleRequest(req, res);
+    } else {
+      // Fallback if engine is not available
+      console.log("[Socket] Socket.IO engine not ready");
+      res.status(503).json({ error: "Socket.IO not ready" });
+    }
   } catch (error) {
     console.error("[Socket] Error:", error);
     if (!res.headersSent) {
@@ -51,4 +58,5 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
   }
 }
+
 
