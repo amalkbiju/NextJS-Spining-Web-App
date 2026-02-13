@@ -9,69 +9,84 @@ export const config = {
 };
 
 /**
- * Socket.IO API Handler for Vercel Serverless
+ * Socket.IO Handler for Next.js on Vercel
  * 
- * CRITICAL FIX: Explicitly call Socket.IO engine's handleRequest method
- * This is the proper way to integrate Socket.IO with Next.js on serverless.
+ * The key insight: Socket.IO's engine.handleRequest expects to receive
+ * the socket stream directly so it can write binary frames.
+ * 
+ * We must NOT call res.json() or res.status() before calling engine.handleRequest
+ * because that will close the connection.
  */
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   try {
+    // Don't process if response already sent
+    if (res.writableEnded) {
+      return;
+    }
+
     const httpServer = (res.socket as any)?.server;
-    
-    console.log("[Socket] Handler called", {
-      method: req.method,
-      path: req.url,
-      hasServer: !!httpServer,
-    });
-    
-    // Initialize Socket.IO
+
+    // Initialize Socket.IO if server context exists
     let io;
-    try {
-      if (httpServer) {
+    if (httpServer) {
+      try {
         io = getOrCreateSocketIO(httpServer);
         setGlobalIO(io);
-        console.log("[Socket] Created/got Socket.IO from httpServer");
-      } else {
-        io = getGlobalIO();
-        console.log("[Socket] Using cached Socket.IO instance");
+      } catch (e) {
+        console.error("[Socket] Failed to create Socket.IO:", e);
+        if (!res.headersSent) {
+          res.status(500).end("Socket.IO init failed");
+        }
+        return;
       }
-    } catch (err) {
-      console.error("[Socket] Error getting IO:", err);
-      throw err;
+    } else {
+      io = getGlobalIO();
     }
-    
+
     if (!io) {
-      console.error("[Socket] Socket.IO instance is null");
-      return res.status(503).json({ error: "Socket.IO not initialized" });
-    }
-
-    // Access the engine that Socket.IO creates
-    // @ts-ignore - engine is private but we need to access it
-    const engine = io.engine;
-    
-    console.log("[Socket] Engine status:", {
-      hasEngine: !!engine,
-      engineType: typeof engine,
-      hasHandleRequest: engine ? typeof engine.handleRequest : "N/A",
-    });
-    
-    if (!engine || typeof engine.handleRequest !== "function") {
-      console.error("[Socket] Engine or handleRequest not available");
-      return res.status(500).json({ error: "Engine not ready" });
-    }
-
-    // Call Socket.IO's engine handler to process the request
-    console.log("[Socket] Calling engine.handleRequest");
-    engine.handleRequest(req, res);
-
-  } catch (error) {
-    console.error("[Socket] Caught exception:", error);
-    try {
+      console.error("[Socket] No Socket.IO instance available");
       if (!res.headersSent) {
-        res.status(500).json({ error: "Handler exception", msg: String(error) });
+        res.status(503).end("Socket.IO not available");
       }
-    } catch (e) {
-      console.error("[Socket] Failed to send error response:", e);
+      return;
+    }
+
+    // Get the engine
+    // @ts-ignore - accessing private engine property
+    const engine = io.engine;
+
+    if (!engine || typeof engine.handleRequest !== "function") {
+      console.error("[Socket] Engine not available or missing handleRequest");
+      if (!res.headersSent) {
+        res.status(500).end("Engine handler not available");
+      }
+      return;
+    }
+
+    // CRITICAL: Call engine.handleRequest WITHOUT sending any response first
+    // This delegates ALL request handling to Socket.IO's engine
+    // The engine will write directly to the socket
+    try {
+      console.log(`[Socket] Engine handling ${req.method} ${req.url}`);
+      engine.handleRequest(req, res);
+    } catch (err) {
+      console.error("[Socket] Engine handler error:", err);
+      if (!res.headersSent && !res.writableEnded) {
+        res.status(500).end("Handler error");
+      }
+    }
+
+  } catch (err) {
+    console.error("[Socket] Uncaught handler error:", err);
+    if (!res.headersSent && !res.writableEnded) {
+      try {
+        res.status(500).end("Critical error");
+      } catch (e) {
+        // Response already sent, nothing we can do
+      }
     }
   }
 }
