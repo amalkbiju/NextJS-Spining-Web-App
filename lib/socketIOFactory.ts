@@ -24,33 +24,26 @@ export function createSocketIOInstance(httpServer: any): any {
   console.log("🔌 Creating new Socket.IO instance");
 
   try {
-    // Get allowed origins - both localhost and production domain
-    const allowedOrigins: string[] = [
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "http://192.168.1.11:3000",
-    ];
+    // Socket.IO CORS configuration
+    // On Vercel, allow all origins for now to avoid CORS rejections
+    // (the auth middleware will validate actual connections)
+    const corsConfig = {
+      origin: "*", // Allow all origins - Socket.IO will validate connections
+      methods: ["GET", "POST"],
+      credentials: false, // Set to false when allowing *
+    };
 
-    // Add production URL if available
-    if (process.env.NEXTAUTH_URL) {
-      allowedOrigins.push(process.env.NEXTAUTH_URL);
-    }
-
-    console.log("🔐 Socket.IO CORS allowed origins:", allowedOrigins);
+    console.log("🔐 Socket.IO CORS config:", corsConfig);
 
     const io = new Server(httpServer, {
       path: "/api/socket",
-      addTrailingSlash: false, // ← FIX: Don't add trailing slash (prevents Vercel redirect)
-      transports: ["polling", "websocket"], // Polling first (more reliable on Vercel)
+      addTrailingSlash: false,
+      transports: ["polling", "websocket"],
       pingInterval: 25000,
       pingTimeout: 60000,
-      maxHttpBufferSize: 1e6, // 1 MB
-      allowEIO3: true, // Support both EIO 3 and 4
-      cors: {
-        origin: allowedOrigins,
-        methods: ["GET", "POST"],
-        credentials: true,
-      },
+      maxHttpBufferSize: 1e6,
+      allowEIO3: true,
+      cors: corsConfig,
     });
 
     io.on("connection", (socket) => {
