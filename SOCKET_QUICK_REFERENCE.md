@@ -1,14 +1,17 @@
 # Socket.IO Invitation System - Quick Reference Card
 
 ## The Problem
+
 User A invites User B → User B should see a popup → Popup not showing ❌
 
 ## The Solution Approach
+
 Added comprehensive logging to trace the invitation flow and identify where it breaks.
 
 ## Test in 3 Steps
 
 ### Step 1: Setup
+
 ```bash
 npm run dev          # Terminal 1
 # Open two browser windows
@@ -17,11 +20,13 @@ npm run dev          # Terminal 1
 ```
 
 ### Step 2: Do This
+
 1. User A: Create room
 2. User A: Invite User B
 3. Check User B's console for logs
 
 ### Step 3: Read Logs
+
 Look for this sequence in User B's console:
 
 ```
@@ -37,14 +42,14 @@ Look for this sequence in User B's console:
 
 ## If Any Log Is Missing
 
-| Missing Log | Problem | Fix |
-|---|---|---|
-| No connection logs | Socket not initializing | Hard refresh: Cmd+Shift+R |
-| Missing "joined room" | Server didn't get user-join | Restart server: Ctrl+C, npm run dev |
-| Missing "Listening for event" | InvitationNotifications not mounted | Check if component in layout.tsx |
-| Missing "Received event" | Socket disconnected before invite | Keep window in focus |
-| "Email mismatch" logged | Wrong email in data | Check MongoDB user emails |
-| All logs but no popup | CSS/DOM issue | Check Elements tab in DevTools |
+| Missing Log                   | Problem                             | Fix                                 |
+| ----------------------------- | ----------------------------------- | ----------------------------------- |
+| No connection logs            | Socket not initializing             | Hard refresh: Cmd+Shift+R           |
+| Missing "joined room"         | Server didn't get user-join         | Restart server: Ctrl+C, npm run dev |
+| Missing "Listening for event" | InvitationNotifications not mounted | Check if component in layout.tsx    |
+| Missing "Received event"      | Socket disconnected before invite   | Keep window in focus                |
+| "Email mismatch" logged       | Wrong email in data                 | Check MongoDB user emails           |
+| All logs but no popup         | CSS/DOM issue                       | Check Elements tab in DevTools      |
 
 ## Understanding the Flow
 
@@ -69,13 +74,13 @@ No match? → Event ignored ❌
 
 ## Key Files
 
-| File | Purpose |
-|---|---|
-| `lib/socket.ts` | Socket initialization |
-| `lib/socketIOFactory.ts` | Server-side socket & rooms |
-| `app/(protected)/layout.tsx` | Initialize socket on app load |
+| File                                          | Purpose                        |
+| --------------------------------------------- | ------------------------------ |
+| `lib/socket.ts`                               | Socket initialization          |
+| `lib/socketIOFactory.ts`                      | Server-side socket & rooms     |
+| `app/(protected)/layout.tsx`                  | Initialize socket on app load  |
 | `components/room/InvitationNotifications.tsx` | Show popup when event received |
-| `app/api/rooms/[roomId]/route.ts` | Emit invitation event |
+| `app/api/rooms/[roomId]/route.ts`             | Emit invitation event          |
 
 ## Logs Added
 
@@ -87,6 +92,7 @@ No match? → Event ignored ❌
 4. `rooms/[roomId]/route.ts` - Shows invitation emission details
 
 All logs prefixed with emojis:
+
 - 📡 = Listening for event
 - 📨 = Event received
 - ✅ = Success
@@ -96,6 +102,7 @@ All logs prefixed with emojis:
 ## Common Fixes
 
 **Socket won't connect:**
+
 ```bash
 npm install socket.io-client@4.8.3
 npm run build
@@ -103,14 +110,17 @@ npm run dev
 ```
 
 **Email mismatch:**
+
 - Check MongoDB: `db.users.findOne({email: "user@example.com"})`
 - Update if needed: `db.users.updateOne({...}, {$set: {email: "correct@email.com"}})`
 
 **Component not mounting:**
+
 - Verify in `/app/(protected)/layout.tsx`:
+
 ```tsx
 <>
-  <InvitationNotifications />  // ← Must be here
+  <InvitationNotifications /> // ← Must be here
   {children}
 </>
 ```

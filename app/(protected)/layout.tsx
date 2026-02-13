@@ -35,7 +35,7 @@ export default function ProtectedLayout({
       );
       const socket = initSocket(user.userId);
 
-      // Keep socket alive by attaching minimal listeners
+      // Keep socket alive by attaching persistent listeners
       // These prevent the socket from being garbage collected
       const handleConnect = () => {
         console.log("✅ Protected layout: Socket connected");
@@ -45,13 +45,20 @@ export default function ProtectedLayout({
         console.log("⚠️  Protected layout: Socket disconnected");
       };
 
+      // Add listeners that will keep socket alive
       socket.on("connect", handleConnect);
       socket.on("disconnect", handleDisconnect);
+      
+      // Add a catch-all listener for any events to keep socket active
+      socket.onAny((eventName, ...args) => {
+        console.log(`📨 Socket event received: ${eventName}`);
+      });
 
       // Cleanup on unmount
       return () => {
         socket.off("connect", handleConnect);
         socket.off("disconnect", handleDisconnect);
+        socket.offAny();
       };
     }
     return undefined;

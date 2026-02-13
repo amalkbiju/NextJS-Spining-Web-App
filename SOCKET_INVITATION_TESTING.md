@@ -3,6 +3,7 @@
 ## Current Implementation Status ✅
 
 ### What's Been Fixed
+
 1. **Socket.IO 400 Bad Request** ✅
    - Using Pages Router (`/pages/api/socket.ts`) for Socket.IO protocol
    - Proper httpServer access and initialization
@@ -24,6 +25,7 @@
    - Retry logic with exponential backoff (5 attempts)
 
 ### What Needs Testing
+
 The invitation delivery chain is now instrumented with comprehensive logging. The issue (popup not showing) can now be diagnosed by following the logs.
 
 ## Architecture Overview
@@ -50,11 +52,13 @@ If no match → Event ignored (logged as "❌ Email mismatch")
 ## How to Test & Debug
 
 ### Setup
+
 1. Open two browser windows/tabs (or different browsers)
 2. Log User A into one, User B into another
 3. Make sure you have the same users defined in MongoDB (or create test users)
 
 ### Test Scenario
+
 1. **User A**: Create a room
 2. **User A**: Find "Invite User" button and search for User B
 3. **User A**: Click to invite User B
@@ -63,6 +67,7 @@ If no match → Event ignored (logged as "❌ Email mismatch")
 ### Reading the Logs
 
 **User B's Browser Console** (F12 → Console):
+
 ```
 ✅ Socket.IO connected: ...          ← Socket connected
 📤 Emitted user-join event for userId: ... ← User join sent
@@ -83,6 +88,7 @@ If no match → Event ignored (logged as "❌ Email mismatch")
 ```
 
 **Server Console/Logs**:
+
 ```
 ✓ User <ID> joined room 'user-<ID>' with socket <ID>
 
@@ -96,6 +102,7 @@ If no match → Event ignored (logged as "❌ Email mismatch")
 ## Key Diagnostic Points
 
 ### Critical Checks
+
 1. **Socket Connected?** → Check first log group
 2. **Socket in Room?** → Check "joined socket room" message
 3. **Listener Attached?** → Check "Listening for event" with `socketConnected: true`
@@ -108,7 +115,7 @@ If no match → Event ignored (logged as "❌ Email mismatch")
 
 **Most Likely Causes (in order of probability):**
 
-1. **Email Mismatch** 
+1. **Email Mismatch**
    - User B's browser shows: `❌ Email mismatch - invitation not for this user`
    - Compare `invitedUserEmail` vs `currentUserEmail` in the log
    - Solution: Verify user data in MongoDB, check for case differences or whitespace

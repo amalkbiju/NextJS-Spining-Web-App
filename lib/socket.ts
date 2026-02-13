@@ -8,9 +8,23 @@ let socket: Socket | null = null;
  * @returns Socket instance
  */
 export function initSocket(userId?: string): Socket {
-  // Return existing socket if already initialized
-  if (socket && socket.connected) {
-    console.log("✅ Socket.IO already connected, reusing instance");
+  // Return existing socket if already exists
+  if (socket) {
+    console.log("✅ Socket.IO instance already exists, reusing:", {
+      connected: socket.connected,
+      id: socket.id,
+    });
+    
+    // If socket exists but not connected, ensure user-join is emitted once connected
+    if (!socket.connected) {
+      socket.once("connect", () => {
+        if (userId) {
+          socket?.emit("user-join", { userId });
+          console.log(`📤 Emitted user-join event for userId: ${userId}`);
+        }
+      });
+    }
+    
     return socket;
   }
 
@@ -68,6 +82,8 @@ export function initSocket(userId?: string): Socket {
 
   socket.on("disconnect", () => {
     console.log("⚠️  Socket.IO disconnected");
+    // Reset socket to null so it can be reinitialized
+    socket = null;
   });
 
   socket.on("connect_error", (error: any) => {

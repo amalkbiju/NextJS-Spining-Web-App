@@ -1,6 +1,7 @@
 # Socket.IO Invitation Delivery Diagnostics
 
 ## Issue
+
 User A creates a room and invites User B by selecting them. User B should receive a popup notification/invitation, but currently does not.
 
 ## Expected Flow
@@ -16,7 +17,9 @@ User A creates a room and invites User B by selecting them. User B should receiv
 ## Diagnostic Steps
 
 ### Step 1: Verify Socket Initialization
+
 **User B's console should show:**
+
 ```
 ✅ Socket.IO connected: <socket-id>
 📤 Emitted user-join event for userId: <userId>
@@ -24,7 +27,9 @@ User A creates a room and invites User B by selecting them. User B should receiv
 ```
 
 ### Step 2: Verify Event Listener Attachment
+
 **User B's console should show:**
+
 ```
 📡 Listening for event: user-invited {
   socketConnected: true,
@@ -33,7 +38,9 @@ User A creates a room and invites User B by selecting them. User B should receiv
 ```
 
 ### Step 3: Verify User Join on Server
+
 **Server logs should show:**
+
 ```
 ✓ User <userId> joined room 'user-<userId>' with socket <socket-id> {
   totalUsersTracked: <count>,
@@ -42,7 +49,9 @@ User A creates a room and invites User B by selecting them. User B should receiv
 ```
 
 ### Step 4: Verify Invitation Emission
+
 **Server logs should show (from PUT /api/rooms):**
+
 ```
 📨 About to emit user-invited with data: {
   "roomId": "...",
@@ -64,7 +73,9 @@ User A creates a room and invites User B by selecting them. User B should receiv
 **Critical Check:** If count = 0, User B's socket is NOT in the room yet!
 
 ### Step 5: Verify Event Reception and Display
+
 **User B's console should show:**
+
 ```
 📨 Received user-invited event: {
   invitedUserEmail: "<User B's Email>",
@@ -75,12 +86,14 @@ User A creates a room and invites User B by selecting them. User B should receiv
 ```
 
 If you see:
+
 ```
 ❌ Email mismatch - invitation not for this user {
   invitedUserEmail: "...",
   currentUserEmail: "..."
 }
 ```
+
 Then the emails don't match! Check if there's a typo or formatting issue.
 
 ## Debugging Checklist
@@ -97,21 +110,25 @@ Then the emails don't match! Check if there's a typo or formatting issue.
 ## Common Issues
 
 ### No Socket Connection
+
 - Socket not initialized
 - Socket initializing after event is sent
 - Connection dropped before event received
 
 ### Socket Not in Room
+
 - `user-join` event not received by server
 - Socket not calling `socket.join()`
 - Socket room naming mismatch
 
 ### Event Not Reaching Component
+
 - Event listener not attached
 - Event emitted before listener attached
 - Event listener detached prematurely
 
 ### Email Mismatch
+
 - `data.invitedUser.email` doesn't match `user?.email`
 - Email has different casing
 - Email has whitespace

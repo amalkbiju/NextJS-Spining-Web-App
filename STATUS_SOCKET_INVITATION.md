@@ -7,21 +7,25 @@ I've added comprehensive diagnostics to identify why invitation popups aren't sh
 ### Code Changes
 
 **1. Enhanced Logging in `components/room/InvitationNotifications.tsx`**
+
 - Added detailed logging when `user-invited` event is received
 - Shows both `invitedUserEmail` and `currentUserEmail` for debugging email matching
 - Logs whether email match succeeded or failed with clear indicators
 
 **2. Improved Logging in `lib/socket.ts`**
+
 - Enhanced `onEvent()` function to log socket connection status
 - Shows `socketConnected` and `socketId` when listener is attached
 - Helps verify socket is ready before listening for events
 
 **3. Added Room Join Verification in `lib/socketIOFactory.ts`**
+
 - Enhanced `user-join` event handler logging
 - Shows count of users tracked and sockets in the room
 - Helps verify socket is actually in the target room
 
 **4. Detailed Invitation Emission Logging in `app/api/rooms/[roomId]/route.ts`**
+
 - Logs complete invitation data being sent
 - Shows how many sockets are connected to target room
 - Confirms emission success/failure
@@ -35,11 +39,12 @@ I've added comprehensive diagnostics to identify why invitation popups aren't sh
 ## The Issue Summarized
 
 When User A invites User B by selecting them and clicking invite, the server calls:
+
 ```typescript
 await emitToUser(oppositeUser.userId, "user-invited", {
   roomId: "...",
-  invitedUser: { userId, name, email },  // User B's data
-  creator: { userId, name, email }        // User A's data
+  invitedUser: { userId, name, email }, // User B's data
+  creator: { userId, name, email }, // User A's data
 });
 ```
 
@@ -80,10 +85,12 @@ This should emit to `user-{User B's userId}` room, and User B's `InvitationNotif
 Common issues to look for:
 
 1. **Email Mismatch** (Most Common)
+
    ```
    invitedUserEmail: "john@example.com"
    currentUserEmail: "john.doe@example.com"  // ← Doesn't match!
    ```
+
    - Check MongoDB for exact email values
    - Look for typos, spacing, or case differences
 
@@ -161,6 +168,7 @@ If you want to understand the code:
 ## Key Logs To Watch For
 
 **Success Indicators:**
+
 - ✅ `Socket.IO connected`
 - ✅ `joined socket room`
 - ✅ `Listening for event: user-invited` with `socketConnected: true`
@@ -168,6 +176,7 @@ If you want to understand the code:
 - ✅ `Email match! Displaying invitation popup`
 
 **Failure Indicators:**
+
 - ❌ `Socket not initialized`
 - ❌ `joined socket room` missing (socket not in room)
 - ❌ `Listening for event` missing (listener not attached)
@@ -196,6 +205,7 @@ Then hard refresh browser (Cmd+Shift+R on Mac, Ctrl+Shift+R on Windows).
 ## Questions?
 
 Check these docs in order:
+
 1. **SOCKET_LOG_FLOW.md** - Shows expected logs and where things can break
 2. **SOCKET_INVITATION_TESTING.md** - Shows how to test
 3. **INVITATION_DIAGNOSTICS.md** - Shows diagnostic steps

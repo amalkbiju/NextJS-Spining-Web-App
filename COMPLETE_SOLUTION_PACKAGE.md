@@ -99,14 +99,14 @@ Added **comprehensive diagnostic logging** to trace why invitation popups aren't
 
 Use this table to find the problem:
 
-| Missing Log | Likely Issue | Check This |
-|---|---|---|
-| No connection logs | Socket not init | Hard refresh page |
-| No "joined room" | Server not listening | Restart server |
-| No "Listening for" | Component not mounted | Check layout.tsx |
-| No "Received event" | Socket disconnected | Keep window focused |
-| "Email mismatch" | Data mismatch | Check MongoDB emails |
-| All logs but no popup | DOM/CSS issue | DevTools Elements tab |
+| Missing Log           | Likely Issue          | Check This            |
+| --------------------- | --------------------- | --------------------- |
+| No connection logs    | Socket not init       | Hard refresh page     |
+| No "joined room"      | Server not listening  | Restart server        |
+| No "Listening for"    | Component not mounted | Check layout.tsx      |
+| No "Received event"   | Socket disconnected   | Keep window focused   |
+| "Email mismatch"      | Data mismatch         | Check MongoDB emails  |
+| All logs but no popup | DOM/CSS issue         | DevTools Elements tab |
 
 See **SOCKET_LOG_FLOW.md** for detailed diagnostic flowcharts.
 
@@ -149,6 +149,7 @@ If mismatch: Event ignored ❌
 ## Testing Instructions
 
 ### Setup
+
 ```bash
 # Terminal
 npm run dev
@@ -156,13 +157,14 @@ npm run dev
 # Browser Window 1: User A
 # Login as user A, create account if needed
 
-# Browser Window 2: User B  
+# Browser Window 2: User B
 # Login as user B (different account)
 
 # Keep both browsers visible with console open (F12)
 ```
 
 ### Test Scenario
+
 1. User A: Create a room
 2. User A: Look for "Invite User" option
 3. User A: Search for and select User B
@@ -173,12 +175,14 @@ npm run dev
 ### Reading Results
 
 **Best Case:**
+
 - ✅ All logs appear in User B's console
 - ✅ Email match confirmed in logs
 - ✅ Popup appears on User B's screen
 - ✅ Can click Accept or Decline
 
 **Partial Success:**
+
 - ✅ Socket connected
 - ✅ Room joined
 - ✅ Listening for event
@@ -186,6 +190,7 @@ npm run dev
 - ❌ Email mismatch → Update user emails in database
 
 **No Progress:**
+
 - ❌ No connection logs → Socket failing to initialize
 - ❌ No room joined confirmation → Server not handling user-join
 - ❌ No listener attached → InvitationNotifications not mounted
@@ -193,6 +198,7 @@ npm run dev
 ## Common Fixes
 
 ### Fix 1: Socket Connection Issues
+
 ```bash
 # Restart server
 Ctrl+C
@@ -203,6 +209,7 @@ Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows)
 ```
 
 ### Fix 2: Email Mismatch
+
 ```javascript
 // Check current logged-in user
 import { useAuthStore } from "@/lib/store/authStore";
@@ -216,11 +223,12 @@ console.log("Logged in as:", user?.email);
 // Update in MongoDB:
 db.users.updateOne(
   { userId: "..." },
-  { $set: { email: "exact@matching.email" } }
+  { $set: { email: "exact@matching.email" } },
 );
 ```
 
 ### Fix 3: Component Not Mounted
+
 ```typescript
 // Verify InvitationNotifications is in:
 // /app/(protected)/layout.tsx
@@ -236,6 +244,7 @@ export default function ProtectedLayout({ children }) {
 ```
 
 ### Fix 4: Complete Reset
+
 ```bash
 # Stop server
 Ctrl+C
@@ -281,13 +290,13 @@ Invitation:
 
 Choose based on your need:
 
-| Document | Best For | Read Time |
-|---|---|---|
-| **SOCKET_QUICK_REFERENCE.md** | Quick troubleshooting | 5 min |
-| **SOCKET_LOG_FLOW.md** | Understanding failure modes | 15 min |
-| **SOCKET_INVITATION_TESTING.md** | Complete testing guide | 20 min |
-| **STATUS_SOCKET_INVITATION.md** | Technical overview | 10 min |
-| **INVITATION_DIAGNOSTICS.md** | Diagnostic checklist | 10 min |
+| Document                         | Best For                    | Read Time |
+| -------------------------------- | --------------------------- | --------- |
+| **SOCKET_QUICK_REFERENCE.md**    | Quick troubleshooting       | 5 min     |
+| **SOCKET_LOG_FLOW.md**           | Understanding failure modes | 15 min    |
+| **SOCKET_INVITATION_TESTING.md** | Complete testing guide      | 20 min    |
+| **STATUS_SOCKET_INVITATION.md**  | Technical overview          | 10 min    |
+| **INVITATION_DIAGNOSTICS.md**    | Diagnostic checklist        | 10 min    |
 
 ## Success Checklist
 
@@ -351,6 +360,7 @@ If still stuck:
 **The system works.** Now we can see where it fails.
 
 Every step of the invitation flow now has logging:
+
 - Socket connection
 - Socket room joining
 - Event listener attachment

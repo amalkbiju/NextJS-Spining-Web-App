@@ -1,7 +1,9 @@
 # Fix: Socket.IO Connections Dropping Immediately
 
 ## Problem
+
 Users were connecting to Socket.IO but immediately disconnecting:
+
 ```
 👤 User connected with socket ID: PCcMvNHooyWkVRixAABF
 ❌ User disconnected: PCcMvNHooyWkVRixAABF
@@ -10,11 +12,13 @@ Users were connecting to Socket.IO but immediately disconnecting:
 This happened repeatedly - connection followed immediately by disconnection, preventing any real-time features from working.
 
 ## Root Cause
+
 **Socket.IO connection was not maintained because there were no event listeners attached to it.**
 
 In the protected layout, we were calling:
+
 ```typescript
-initSocket(user.userId);  // ❌ Socket created but abandoned
+initSocket(user.userId); // ❌ Socket created but abandoned
 ```
 
 Without any event listeners, React's garbage collection could potentially clean up the socket reference, or Socket.IO could close the connection thinking nobody was listening.
@@ -56,6 +60,7 @@ useEffect(() => {
 ### Connection Lifecycle
 
 **Before (Broken):**
+
 ```
 1. User enters protected layout
 2. initSocket() called
@@ -66,6 +71,7 @@ useEffect(() => {
 ```
 
 **After (Fixed):**
+
 ```
 1. User enters protected layout
 2. initSocket() called
@@ -102,6 +108,7 @@ home/page.tsx, room/page.tsx, etc attach their own listeners
 ## Testing
 
 ### Browser Console Expected Output
+
 ```
 🔌 Protected layout: Initializing Socket.IO for user USER_...
 ✅ Socket.IO already connected, reusing instance
@@ -109,6 +116,7 @@ home/page.tsx, room/page.tsx, etc attach their own listeners
 ```
 
 ### Server Logs Expected Output
+
 ```
 👤 User connected with socket ID: PCcMvNHooyWkVRixAABF
 ✓ User USER_... joined room 'user-USER_...'
@@ -116,6 +124,7 @@ home/page.tsx, room/page.tsx, etc attach their own listeners
 ```
 
 ### What Should Happen
+
 1. User logs in and enters protected layout
 2. Socket connects once
 3. Socket **stays connected** (no disconnect)
@@ -131,22 +140,25 @@ home/page.tsx, room/page.tsx, etc attach their own listeners
 ✅ **Real-Time Features Now Work** - Invitations, room events, etc flow properly  
 ✅ **Efficient** - Minimal overhead (just 2 event listeners)  
 ✅ **Clean Cleanup** - Listeners removed on unmount  
-✅ **No Breaking Changes** - All existing code continues to work  
+✅ **No Breaking Changes** - All existing code continues to work
 
 ## Code Changes
 
 **File**: `/app/(protected)/layout.tsx`
 
 Added socket listener setup in a new useEffect hook that:
+
 - Runs only when user is authenticated
 - Attaches connect/disconnect listeners
 - Cleans up listeners on unmount
 - Provides diagnostics via console logs
 
 ## Deployment
+
 ✅ Changes committed to GitHub  
 ✅ Build passes with no errors  
-✅ Ready for Vercel auto-deployment  
+✅ Ready for Vercel auto-deployment
 
 ## Summary
+
 By ensuring Socket.IO connections have active event listeners in the protected layout, we maintain persistent real-time connections across all authenticated pages. This fixes the issue where users were connecting and immediately disconnecting, breaking all socket-based features.
