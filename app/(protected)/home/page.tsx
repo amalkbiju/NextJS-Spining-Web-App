@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useAuthStore } from "@/lib/store/authStore";
 import { initSocket, onEvent, offEvent } from "@/lib/socket";
+import {
+  startNotificationPolling,
+  stopNotificationPolling,
+  onPolledEvent,
+  offPolledEvent,
+} from "@/lib/notificationPolling";
 import { Room } from "@/types";
 import {
   LogOut,
@@ -38,20 +44,19 @@ export default function HomePage() {
   const [creatingRoom, setCreatingRoom] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user?.userId || !token) {
       router.push("/login");
       return;
     }
 
     fetchRooms();
+
+    // Try Socket.IO first
     console.log("🔌 Home page: Initializing socket with userId:", user?.userId);
     const socketInstance = initSocket(user?.userId);
 
-    // Only attach listeners if Socket.IO is available
-    if (!socketInstance) {
-      console.warn("⚠️  Socket.IO not available - real-time features disabled");
-      return;
-    }
+    // Start polling as fallback for when Socket.IO is not available
+    startNotificationPolling(user.userId, token);
 
     const handleConnect = () => {
       console.log("✅ Home page: Socket connected successfully");
@@ -61,25 +66,13 @@ export default function HomePage() {
       console.log("❌ Home page: Socket disconnected");
     };
 
-    socketInstance.on("connect", handleConnect);
-    socketInstance.on("disconnect", handleDisconnect);
-
     const handleUserInvited = (data: any) => {
-      console.log("📨 Home page received 'user-invited' event:", data);
-      console.log("📨 Current user email:", user?.email);
-      console.log("📨 Invited user email:", data.invitedUser?.email);
-      console.log("📨 Creator info:", data.creator);
-
       if (data.invitedUser && data.invitedUser.email === user?.email) {
         const invitation: Invitation = {
           roomId: data.roomId,
           creatorName: data.creator.name,
           creatorEmail: data.creator.email,
         };
-        console.log(
-          "✓ Invitation matches current user, adding to state:",
-          invitation,
-        );
         setInvitations((prev) => [invitation, ...prev]);
 
         if ("Notification" in window && Notification.permission === "granted") {
@@ -88,27 +81,14 @@ export default function HomePage() {
             icon: "/wheel-icon.png",
           });
         }
-      } else {
-        console.log(
-          "✗ Invitation is for different user. Expected:",
-          user?.email,
-          "Got:",
-          data.invitedUser?.email,
-        );
       }
     };
 
     const handleRoomCreated = (data: any) => {
-      console.log("🎮 Home page received 'room-created' event:", data);
       if (data.creatorId !== user?.userId) {
-        console.log(`✓ New room available from ${data.creatorName}`);
         setRooms((prev) => {
-          // Check if room already exists to avoid duplicates
           const roomExists = prev.some((room) => room.roomId === data.roomId);
           if (roomExists) {
-            console.log(
-              `⚠️  Room ${data.roomId} already exists, skipping duplicate`,
-            );
             return prev;
           }
           return [
@@ -128,16 +108,45 @@ export default function HomePage() {
       }
     };
 
-    onEvent("user-invited", handleUserInvited);
-    onEvent("room-created", handleRoomCreated);
+    const handleUserJoinedRoom = (data: any) => {
+      if (data.joinedUser?.email) {
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification(`User Joined Room!`, {
+            body: `${data.joinedUser.name || "Someone"} has joined the spinning wheel game!`,
+            icon: "/wheel-icon.png",
+          });
+        }
+      }
+    };
+
+    // Attach Socket.IO listeners if available
+    if (socketInstance) {
+      socketInstance.on("connect", handleConnect);
+      socketInstance.on("disconnect", handleDisconnect);
+      onEvent("user-invited", handleUserInvited);
+      onEvent("room-created", handleRoomCreated);
+      onEvent("user-joined-room", handleUserJoinedRoom);
+    }
+
+    // Also attach polling listeners (works with or without Socket.IO)
+    onPolledEvent("user-invited", handleUserInvited);
+    onPolledEvent("room-created", handleRoomCreated);
+    onPolledEvent("user-joined-room", handleUserJoinedRoom);
 
     return () => {
-      offEvent("user-invited", handleUserInvited);
-      offEvent("room-created", handleRoomCreated);
-      socketInstance.off("connect", handleConnect);
-      socketInstance.off("disconnect", handleDisconnect);
+      if (socketInstance) {
+        offEvent("user-invited", handleUserInvited);
+        offEvent("room-created", handleRoomCreated);
+        offEvent("user-joined-room", handleUserJoinedRoom);
+        socketInstance.off("connect", handleConnect);
+        socketInstance.off("disconnect", handleDisconnect);
+      }
+      offPolledEvent("user-invited", handleUserInvited);
+      offPolledEvent("room-created", handleRoomCreated);
+      offPolledEvent("user-joined-room", handleUserJoinedRoom);
+      stopNotificationPolling();
     };
-  }, [isAuthenticated, user?.email, user?.userId]);
+  }, [isAuthenticated, user?.email, user?.userId, token]);
 
   useEffect(() => {
     const filtered = rooms.filter((room) =>

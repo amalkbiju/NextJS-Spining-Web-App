@@ -81,28 +81,33 @@ export async function POST(
       const httpServer = (request as any)?.socket?.server;
       if (httpServer) {
         getOrCreateSocketIO(httpServer);
-        console.log("✅ Socket.IO initialized for accept-invite events");
       }
     } catch (err) {
-      console.warn("⚠️ Could not initialize Socket.IO from request");
+      // Silently fail if Socket.IO cannot be initialized
     }
 
-    // Emit socket event to the room creator to notify that the opposite user joined
+    // Emit socket event to notify both the room creator AND the accepting user
+    const joinEvent = {
+      roomId,
+      joinedUser: {
+        userId: userId,
+        email: email,
+      },
+      room: updatedRoom,
+      timestamp: Date.now(),
+    };
+
     try {
-      await emitToUser(updatedRoom.creatorId, "user-joined-room", {
-        roomId,
-        joinedUser: {
-          userId: userId,
-          email: email,
-        },
-        room: updatedRoom,
-        timestamp: Date.now(),
-      });
-      console.log(
-        `✓ User ${userId} joined room event emitted to creator ${updatedRoom.creatorId}`,
-      );
+      // Notify room creator that user accepted and joined
+      await emitToUser(updatedRoom.creatorId, "user-joined-room", joinEvent);
     } catch (socketError: any) {
-      console.error("Failed to emit socket event:", socketError.message);
+      // Don't fail the API response if socket emission fails
+    }
+
+    try {
+      // ALSO notify the accepting user that they successfully joined
+      await emitToUser(userId, "user-joined-room", joinEvent);
+    } catch (socketError: any) {
       // Don't fail the API response if socket emission fails
     }
 

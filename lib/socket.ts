@@ -138,12 +138,16 @@ export function initSocket(userId?: string): Socket | null {
   });
 
   socket.on("connect_error", (error: any) => {
-    console.error("❌ Socket.IO connection error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      code: error.code,
-      type: error.type,
-    });
+    // This is expected when Socket.IO server is not available
+    // Only log at debug level to avoid cluttering the console
+    if (error) {
+      try {
+        const errorDetails = `Message: ${error.message || "No message"}, Code: ${error.code || "No code"}, Type: ${error.type || "No type"}`;
+        console.debug("Socket.IO connection error details:", errorDetails);
+      } catch (e) {
+        console.debug("Socket.IO connection failed:", String(error));
+      }
+    }
   });
 
   socket.on("error", (error: any) => {

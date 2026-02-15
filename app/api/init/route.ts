@@ -58,7 +58,6 @@ export async function GET(request: NextRequest) {
       console.error("⚠️  Error triggering socket init:", err);
     }
 
-    console.warn("⚠️  Socket.IO not yet available");
     return NextResponse.json(
       {
         success: true,

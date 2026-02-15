@@ -94,12 +94,9 @@ export async function POST(request: NextRequest) {
         status: newRoom.status,
         timestamp: Date.now(),
       });
-      console.log(
-        `✓ Broadcasted new room creation: ${newRoom.roomId} by ${newRoom.creatorName}`,
-      );
     } catch (socketError: any) {
-      console.error("Failed to broadcast room creation:", socketError.message);
-      // Don't fail the API response if socket broadcast fails
+      // Broadcast failed - this is expected if Socket.IO is not configured
+      // The API response still succeeds
     }
 
     return NextResponse.json(

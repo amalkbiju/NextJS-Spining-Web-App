@@ -124,10 +124,9 @@ export async function PUT(
       const httpServer = (request as any)?.socket?.server;
       if (httpServer) {
         getOrCreateSocketIO(httpServer);
-        console.log("✅ Socket.IO initialized for room join events");
       }
     } catch (err) {
-      console.warn("⚠️ Could not initialize Socket.IO from request");
+      // Silently fail if Socket.IO cannot be initialized
     }
 
     // Emit socket event to the invited user
@@ -145,41 +144,40 @@ export async function PUT(
           email: currentUser?.email,
         },
       };
-      console.log(
-        `📨 About to emit user-invited with data:`,
-        JSON.stringify(invitationData, null, 2),
-      );
       const emitResult = await emitToUser(
         oppositeUser.userId,
         "user-invited",
         invitationData,
-      );
-      console.log(
-        `✓ Invitation emitted to user ${oppositeUser.userId}, result: ${emitResult}`,
       );
     } catch (socketError: any) {
       console.error("Failed to emit socket event:", socketError.message);
       // Don't fail the API response if socket emission fails
     }
 
-    // Also emit a join event to notify the room creator
+    // Emit a join event to notify both the room creator AND the joining user
+    const joinEvent = {
+      roomId,
+      joinedUser: {
+        userId: decoded.userId,
+        name: currentUser?.name,
+        email: decoded.email,
+      },
+      room,
+      timestamp: Date.now(),
+    };
+
     try {
-      await emitToUser(room.creatorId, "user-joined-room", {
-        roomId,
-        joinedUser: {
-          userId: decoded.userId,
-          name: currentUser?.name,
-          email: decoded.email,
-        },
-        room,
-        timestamp: Date.now(),
-      });
-      console.log(
-        `✓ User joined room event emitted to creator ${room.creatorId}`,
-      );
+      // Notify room creator that someone joined
+      await emitToUser(room.creatorId, "user-joined-room", joinEvent);
     } catch (socketError: any) {
-      console.error("Failed to emit user-joined event:", socketError.message);
-      // Don't fail the API response if socket emission fails
+      // Emit failed - this is expected if Socket.IO is not configured
+    }
+
+    try {
+      // ALSO notify the joining user that they successfully joined
+      await emitToUser(decoded.userId, "user-joined-room", joinEvent);
+    } catch (socketError: any) {
+      // Emit failed - this is expected if Socket.IO is not configured
     }
 
     return NextResponse.json(
