@@ -1,5 +1,5 @@
 import { getIOInstance, getGlobalIO } from "./getIO";
-import { addNotification } from "@/app/api/notifications/route";
+import { addNotification } from "./notificationStore";
 
 // This utility provides access to Socket.IO on the server side
 // It needs to be called from within Next.js API routes

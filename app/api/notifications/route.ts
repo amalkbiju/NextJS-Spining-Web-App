@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/mongodb";
 import { verifyToken, getTokenFromHeader } from "@/lib/utils/jwt";
-
-// Store pending notifications in memory (for this server instance)
-// In production, use a database or message queue
-const pendingNotifications: Map<
-  string,
-  Array<{ type: string; data: any; timestamp: number }>
-> = new Map();
+import { pendingNotifications } from "@/lib/notificationStore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -67,21 +61,5 @@ export async function GET(request: NextRequest) {
       { success: false, message: error.message },
       { status: 500 },
     );
-  }
-}
-
-// Helper function to add a notification for a user
-export function addNotification(userId: string, type: string, data: any) {
-  if (!pendingNotifications.has(userId)) {
-    pendingNotifications.set(userId, []);
-  }
-
-  const notifications = pendingNotifications.get(userId);
-  if (notifications) {
-    notifications.push({
-      type,
-      data,
-      timestamp: Date.now(),
-    });
   }
 }
