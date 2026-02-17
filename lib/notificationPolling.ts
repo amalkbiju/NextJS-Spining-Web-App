@@ -1,7 +1,12 @@
 import axios from "axios";
 
 interface Notification {
-  type: "user-invited" | "user-joined-room";
+  type:
+    | "user-invited"
+    | "user-joined-room"
+    | "spin-both-ready"
+    | "user-spin-ready"
+    | "game-reset";
   data: any;
 }
 
@@ -35,37 +40,44 @@ function emitNotification(eventName: string, data: any) {
 
 export function startNotificationPolling(userId: string, token: string) {
   if (pollInterval) {
-    return; // Already polling
+    return;
   }
 
   console.log("📱 Starting notification polling for user:", userId);
 
-  pollInterval = setInterval(async () => {
-    try {
-      const response = await axios.get("/api/notifications", {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { since: lastCheckTime },
+  pollNotifications(token);
+
+  pollInterval = setInterval(() => {
+    pollNotifications(token);
+  }, 1000);
+}
+
+async function pollNotifications(token: string) {
+  try {
+    const response = await axios.get("/api/notifications", {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { since: lastCheckTime },
+      timeout: 5000,
+    });
+
+    if (response.data.success && response.data.notifications) {
+      const notifications = response.data.notifications;
+
+      notifications.forEach((notification: Notification) => {
+        console.log(
+          `📨 Received notification: ${notification.type}`,
+          notification.data,
+        );
+        emitNotification(notification.type, notification.data);
       });
 
-      if (response.data.success && response.data.notifications) {
-        const notifications = response.data.notifications;
-
-        notifications.forEach((notification: Notification) => {
-          console.log(
-            `📨 Received notification: ${notification.type}`,
-            notification.data,
-          );
-          emitNotification(notification.type, notification.data);
-        });
-
-        if (notifications.length > 0) {
-          lastCheckTime = Date.now();
-        }
+      if (notifications.length > 0) {
+        lastCheckTime = Date.now();
       }
-    } catch (error) {
-      // Silently fail - polling is a fallback
     }
-  }, 3000); // Poll every 3 seconds
+  } catch (error) {
+    // Silently fail
+  }
 }
 
 export function stopNotificationPolling() {

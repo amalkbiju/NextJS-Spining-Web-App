@@ -20,6 +20,8 @@ interface SpinningWheelProps {
   winner?: string | null;
   selectedWinner?: string | null;
   finalRotation?: number | null;
+  spinStartTime?: number | null;
+  spinStartTimeRef?: React.MutableRefObject<number | null>;
   onStartSpin?: () => void;
   onResetGame?: () => void;
   canShowStartButton?: boolean;
@@ -46,6 +48,8 @@ export default function SpinningWheel({
   winner,
   selectedWinner,
   finalRotation,
+  spinStartTime,
+  spinStartTimeRef,
   onStartSpin,
   onResetGame,
   canShowStartButton = false,
@@ -231,7 +235,6 @@ export default function SpinningWheel({
 
   const spinWheel = useCallback(() => {
     const spinDuration = 5000;
-    const startTime = Date.now();
     const spins = 5;
 
     let finalRotationValue: number;
@@ -261,29 +264,75 @@ export default function SpinningWheel({
       }
     }
 
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / spinDuration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const newRotation = finalRotationValue * easeOut;
+    console.log("🎡 spinWheel called", {
+      spinStartTime,
+      spinStartTimeRef: spinStartTimeRef?.current,
+      now: Date.now(),
+      finalRotationValue,
+    });
 
-      setRotation(newRotation);
+    // CRITICAL SYNCHRONIZATION: Use spinStartTimeRef for immediate access
+    // spinStartTimeRef is set synchronously before isSpinning state update
+    const executeAnimation = () => {
+      // Get spinStartTime from ref (immediate) or fallback to state
+      const actualSpinStartTime = spinStartTimeRef?.current || spinStartTime;
 
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        const normalizedRotation = finalRotationValue % 360;
-        setRotation(normalizedRotation);
-
-        if (onSpinComplete) {
-          const winnerToShow = selectedWinner || player1Name;
-          onSpinComplete(winnerToShow);
-        }
+      if (!actualSpinStartTime) {
+        // If spinStartTime not available yet, wait a bit and retry
+        console.log("⏳ Waiting for spinStartTime...");
+        setTimeout(() => executeAnimation(), 10);
+        return;
       }
+
+      const now = Date.now();
+      const delayUntilStart = Math.max(0, actualSpinStartTime - now);
+
+      console.log("🎬 Animation starting", {
+        actualSpinStartTime,
+        now,
+        delayUntilStart,
+      });
+
+      // Wait until the exact spinStartTime, then start animation
+      setTimeout(() => {
+        const animationStartTime = Date.now();
+
+        const animate = () => {
+          const now = Date.now();
+          // Calculate elapsed time from when animation actually started
+          const elapsed = Math.max(0, now - animationStartTime);
+          const progress = Math.min(elapsed / spinDuration, 1);
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+          const newRotation = finalRotationValue * easeOut;
+
+          setRotation(newRotation);
+
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            const normalizedRotation = finalRotationValue % 360;
+            setRotation(normalizedRotation);
+
+            if (onSpinComplete) {
+              const winnerToShow = selectedWinner || player1Name;
+              onSpinComplete(winnerToShow);
+            }
+          }
+        };
+
+        animate();
+      }, delayUntilStart);
     };
 
-    animate();
-  }, [selectedWinner, player1Name, player2Name, onSpinComplete, finalRotation]);
+    executeAnimation();
+  }, [
+    selectedWinner,
+    player1Name,
+    player2Name,
+    onSpinComplete,
+    finalRotation,
+    spinStartTime,
+  ]);
 
   const handleLeaveGame = () => {
     router.push("/home");
@@ -1059,7 +1108,7 @@ export default function SpinningWheel({
               animation: "fadeIn 1.3s ease-out",
             }}
           >
-            {(canShowStartButton || winner) && (
+            {(canShowStartButton || oppositeUserReady || winner) && (
               <button
                 onClick={() =>
                   winner && onResetGame ? onResetGame() : onStartSpin?.()
@@ -1106,10 +1155,20 @@ export default function SpinningWheel({
                     <RotateCcw size={20} />
                     <span>Play Again</span>
                   </>
+                ) : isSpinning ? (
+                  <>
+                    <Zap size={20} />
+                    <span>Spinning...</span>
+                  </>
+                ) : oppositeUserReady && !canShowStartButton ? (
+                  <>
+                    <Zap size={20} />
+                    <span>Spin Now!</span>
+                  </>
                 ) : (
                   <>
                     <Zap size={20} />
-                    <span>{isSpinning ? "Spinning..." : "Spin Now"}</span>
+                    <span>Spin Now</span>
                   </>
                 )}
               </button>

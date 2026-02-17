@@ -3,6 +3,7 @@ import { Room } from "@/lib/models/Room";
 import { verifyToken, getTokenFromHeader } from "@/lib/utils/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { broadcastToRoom, emitToUser } from "@/lib/socketServer";
+import { pendingNotifications } from "@/lib/notificationStore";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,22 +43,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update start status
-    if (userId === room.creatorId) {
-      room.creatorStarted = true;
-    } else if (userId === room.oppositeUserId) {
-      room.oppositeUserStarted = true;
-    } else {
+    // Determine which user is clicking
+    const isCreator = userId === room.creatorId;
+    const isOpposite = userId === room.oppositeUserId;
+
+    if (!isCreator && !isOpposite) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 403 },
       );
     }
 
+    // Update start status - allow both users to mark themselves as ready
+    if (isCreator) {
+      room.creatorStarted = true;
+    } else if (isOpposite) {
+      room.oppositeUserStarted = true;
+    }
+
     let bothStarted = false;
     let selectedWinner = null;
     let selectedWinnerName = null;
     let finalRotation = 0;
+    const spinStartTime = Date.now() + 500; // Both clients will start spinning 500ms from now
 
     // If both users have started, determine winner RANDOMLY and immediately
     if (room.creatorStarted && room.oppositeUserStarted) {
@@ -83,17 +91,40 @@ export async function POST(request: NextRequest) {
         finalRotation = spins * 360 + 180 + Math.random() * 180;
       }
 
-      // Emit to both players
+      // Emit to both players with synchronized start time
       const eventData = {
         roomId,
         winner: selectedWinner,
         winnerName: selectedWinnerName,
         finalRotation: finalRotation % 360, // Send normalized rotation (0-360)
+        spinStartTime: spinStartTime, // Synchronized start time for both clients
         timestamp: Date.now(),
       };
 
-      emitToUser(room.creatorId, "spin-both-ready", eventData);
-      emitToUser(room.oppositeUserId, "spin-both-ready", eventData);
+      // Store in memory IMMEDIATELY for polling fallback
+      if (!pendingNotifications.has(room.creatorId)) {
+        pendingNotifications.set(room.creatorId, []);
+      }
+      pendingNotifications.get(room.creatorId)?.push({
+        type: "spin-both-ready",
+        data: eventData,
+        timestamp: Date.now(),
+      });
+
+      if (!pendingNotifications.has(room.oppositeUserId)) {
+        pendingNotifications.set(room.oppositeUserId, []);
+      }
+      pendingNotifications.get(room.oppositeUserId)?.push({
+        type: "spin-both-ready",
+        data: eventData,
+        timestamp: Date.now(),
+      });
+
+      // Emit with setImmediate so it doesn't block API response
+      setImmediate(() => {
+        emitToUser(room.creatorId, "spin-both-ready", eventData);
+        emitToUser(room.oppositeUserId, "spin-both-ready", eventData);
+      });
 
       console.log(
         `📤 Sent spin-both-ready to both players: ${room.creatorId} & ${room.oppositeUserId}, Final rotation: ${(finalRotation % 360).toFixed(1)}°, Winner: ${selectedWinnerName}`,
@@ -101,16 +132,38 @@ export async function POST(request: NextRequest) {
     } else {
       room.status = "spinning";
 
-      // Notify the other player that one player is ready
-      const otherUserId =
-        userId === room.creatorId ? room.oppositeUserId : room.creatorId;
-      emitToUser(otherUserId, "user-spin-ready", {
+      // Notify the other player that one player is ready with sync time
+      const otherUserId = isCreator ? room.oppositeUserId : room.creatorId;
+      const readyUserName = isCreator
+        ? room.creatorName
+        : room.oppositeUserName;
+
+      const readyEventData = {
         roomId,
         readyUserId: userId,
+        readyUserName: readyUserName,
         room,
+        spinStartTime: spinStartTime, // Send sync time to opposite user
+      };
+
+      // Store in memory IMMEDIATELY for polling fallback
+      if (!pendingNotifications.has(otherUserId)) {
+        pendingNotifications.set(otherUserId, []);
+      }
+      pendingNotifications.get(otherUserId)?.push({
+        type: "user-spin-ready",
+        data: readyEventData,
+        timestamp: Date.now(),
       });
 
-      console.log(`📤 Sent user-spin-ready to ${otherUserId}`);
+      // Emit with setImmediate so it doesn't block API response
+      setImmediate(() => {
+        emitToUser(otherUserId, "user-spin-ready", readyEventData);
+      });
+
+      console.log(
+        `📤 Sent user-spin-ready to ${otherUserId} - ${readyUserName} is ready to spin`,
+      );
     }
 
     await room.save();
@@ -123,6 +176,8 @@ export async function POST(request: NextRequest) {
         bothStarted,
         winner: selectedWinner,
         winnerName: selectedWinnerName,
+        finalRotation: bothStarted ? finalRotation : undefined,
+        spinStartTime: bothStarted ? spinStartTime : undefined,
       },
       { status: 200 },
     );
@@ -187,8 +242,30 @@ export async function PUT(request: NextRequest) {
       room,
     };
 
-    emitToUser(room.creatorId, "game-reset", resetData);
-    emitToUser(room.oppositeUserId, "game-reset", resetData);
+    // Store in memory IMMEDIATELY for polling fallback
+    if (!pendingNotifications.has(room.creatorId)) {
+      pendingNotifications.set(room.creatorId, []);
+    }
+    pendingNotifications.get(room.creatorId)?.push({
+      type: "game-reset",
+      data: resetData,
+      timestamp: Date.now(),
+    });
+
+    if (!pendingNotifications.has(room.oppositeUserId)) {
+      pendingNotifications.set(room.oppositeUserId, []);
+    }
+    pendingNotifications.get(room.oppositeUserId)?.push({
+      type: "game-reset",
+      data: resetData,
+      timestamp: Date.now(),
+    });
+
+    // Emit with setImmediate so it doesn't block API response
+    setImmediate(() => {
+      emitToUser(room.creatorId, "game-reset", resetData).catch(() => {});
+      emitToUser(room.oppositeUserId, "game-reset", resetData).catch(() => {});
+    });
 
     console.log(
       `📤 Sent game-reset to both players: ${room.creatorId} & ${room.oppositeUserId}`,

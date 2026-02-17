@@ -6,6 +6,7 @@ import { sendInvitationEmail } from "@/lib/utils/email";
 import { NextRequest, NextResponse } from "next/server";
 import { emitToUser } from "@/lib/socketServer";
 import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
+import { pendingNotifications } from "@/lib/notificationStore";
 
 export async function POST(
   request: NextRequest,
@@ -83,20 +84,13 @@ export async function POST(
     // Send email invitation
     await sendInvitationEmail(email.toLowerCase(), room.creatorName, roomId);
 
-    // Ensure Socket.IO is initialized before emitting events
-    try {
-      const httpServer = (request as any)?.socket?.server;
-      if (httpServer) {
-        getOrCreateSocketIO(httpServer);
-        console.log("✅ Socket.IO initialized for invite events");
-      }
-    } catch (err) {
-      console.warn("⚠️ Could not initialize Socket.IO from request");
+    // Store invitation notification immediately for fast polling
+    if (!pendingNotifications.has(invitedUser.userId)) {
+      pendingNotifications.set(invitedUser.userId, []);
     }
-
-    // Emit socket event to notify the invited user in real-time
-    try {
-      await emitToUser(invitedUser.userId, "user-invited", {
+    pendingNotifications.get(invitedUser.userId)?.push({
+      type: "user-invited",
+      data: {
         roomId,
         invitedUser: {
           userId: invitedUser.userId,
@@ -108,14 +102,43 @@ export async function POST(
           name: room.creatorName,
           email: room.creatorEmail,
         },
-      });
-      console.log(
-        `✓ Real-time invitation emitted to user ${invitedUser.userId}`,
-      );
-    } catch (socketError: any) {
-      console.error("Failed to emit socket event:", socketError.message);
-      // Don't fail the API response if socket emission fails
-    }
+      },
+      timestamp: Date.now(),
+    });
+
+    // Emit Socket.IO events asynchronously (don't wait)
+    setImmediate(() => {
+      // Ensure Socket.IO is initialized
+      try {
+        const httpServer = (request as any)?.socket?.server;
+        if (httpServer) {
+          getOrCreateSocketIO(httpServer);
+        }
+      } catch (err) {
+        // Silently fail
+      }
+
+      // Emit socket event to notify the invited user in real-time
+      try {
+        emitToUser(invitedUser.userId, "user-invited", {
+          roomId,
+          invitedUser: {
+            userId: invitedUser.userId,
+            name: invitedUser.name,
+            email: invitedUser.email,
+          },
+          creator: {
+            userId: decoded.userId,
+            name: room.creatorName,
+            email: room.creatorEmail,
+          },
+        }).catch((err) => {
+          console.debug("Socket emit failed:", err.message);
+        });
+      } catch (socketError: any) {
+        // Silently fail
+      }
+    });
 
     return NextResponse.json(
       {

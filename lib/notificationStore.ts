@@ -6,11 +6,7 @@ export const pendingNotifications: Map<
 > = new Map();
 
 // Helper function to add a notification for a user
-export function addNotification(
-  userId: string,
-  type: string,
-  data: any,
-) {
+export function addNotification(userId: string, type: string, data: any) {
   if (!pendingNotifications.has(userId)) {
     pendingNotifications.set(userId, []);
   }

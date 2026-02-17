@@ -5,6 +5,7 @@ import { verifyToken, getTokenFromHeader } from "@/lib/utils/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { emitToUser } from "@/lib/socketServer";
 import { getOrCreateSocketIO } from "@/lib/socketIOFactory";
+import { pendingNotifications } from "@/lib/notificationStore";
 
 export async function GET(
   request: NextRequest,
@@ -119,42 +120,8 @@ export async function PUT(
       );
     }
 
-    // Ensure Socket.IO is initialized before emitting events
-    try {
-      const httpServer = (request as any)?.socket?.server;
-      if (httpServer) {
-        getOrCreateSocketIO(httpServer);
-      }
-    } catch (err) {
-      // Silently fail if Socket.IO cannot be initialized
-    }
-
-    // Emit socket event to the invited user
-    try {
-      const invitationData = {
-        roomId,
-        invitedUser: {
-          userId: oppositeUser.userId,
-          name: oppositeUser.name,
-          email: oppositeUser.email,
-        },
-        creator: {
-          userId: currentUser?.userId,
-          name: currentUser?.name,
-          email: currentUser?.email,
-        },
-      };
-      const emitResult = await emitToUser(
-        oppositeUser.userId,
-        "user-invited",
-        invitationData,
-      );
-    } catch (socketError: any) {
-      console.error("Failed to emit socket event:", socketError.message);
-      // Don't fail the API response if socket emission fails
-    }
-
-    // Emit a join event to notify both the room creator AND the joining user
+    // IMPORTANT: Store notifications in memory IMMEDIATELY before any async operations
+    // This ensures they're available for polling even if Socket.IO fails
     const joinEvent = {
       roomId,
       joinedUser: {
@@ -166,19 +133,84 @@ export async function PUT(
       timestamp: Date.now(),
     };
 
-    try {
-      // Notify room creator that someone joined
-      await emitToUser(room.creatorId, "user-joined-room", joinEvent);
-    } catch (socketError: any) {
-      // Emit failed - this is expected if Socket.IO is not configured
+    // Store notification for room creator
+    if (!pendingNotifications.has(room.creatorId)) {
+      pendingNotifications.set(room.creatorId, []);
     }
+    pendingNotifications.get(room.creatorId)?.push({
+      type: "user-joined-room",
+      data: joinEvent,
+      timestamp: Date.now(),
+    });
 
-    try {
-      // ALSO notify the joining user that they successfully joined
-      await emitToUser(decoded.userId, "user-joined-room", joinEvent);
-    } catch (socketError: any) {
-      // Emit failed - this is expected if Socket.IO is not configured
+    // Store notification for joining user
+    if (!pendingNotifications.has(decoded.userId)) {
+      pendingNotifications.set(decoded.userId, []);
     }
+    pendingNotifications.get(decoded.userId)?.push({
+      type: "user-joined-room",
+      data: joinEvent,
+      timestamp: Date.now(),
+    });
+
+    // Now emit Socket.IO events asynchronously (don't wait for them)
+    // This prevents slow Socket.IO operations from delaying the API response
+    setImmediate(() => {
+      try {
+        const httpServer = (request as any)?.socket?.server;
+        if (httpServer) {
+          getOrCreateSocketIO(httpServer);
+        }
+      } catch (err) {
+        // Silently fail
+      }
+
+      // Emit socket event to the invited user
+      try {
+        const invitationData = {
+          roomId,
+          invitedUser: {
+            userId: oppositeUser.userId,
+            name: oppositeUser.name,
+            email: oppositeUser.email,
+          },
+          creator: {
+            userId: currentUser?.userId,
+            name: currentUser?.name,
+            email: currentUser?.email,
+          },
+        };
+        emitToUser(oppositeUser.userId, "user-invited", invitationData).catch(
+          (err) => {
+            // Log but don't throw
+            console.debug("Socket emit failed:", err.message);
+          },
+        );
+      } catch (socketError: any) {
+        // Silently fail
+      }
+
+      // Emit join events
+      try {
+        emitToUser(room.creatorId, "user-joined-room", joinEvent).catch(
+          (err) => {
+            console.debug("Socket emit failed:", err.message);
+          },
+        );
+      } catch (socketError: any) {
+        // Silently fail
+      }
+
+      try {
+        emitToUser(decoded.userId, "user-joined-room", joinEvent).catch(
+          (err) => {
+            console.debug("Socket emit failed:", err.message);
+          },
+        );
+      } catch (socketError: any) {
+        // Silently fail
+      }
+    });
 
     return NextResponse.json(
       {

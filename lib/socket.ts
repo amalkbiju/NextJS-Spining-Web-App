@@ -97,13 +97,13 @@ export function initSocket(userId?: string): Socket | null {
     // Try WebSocket first, fallback to polling
     transports: ["websocket", "polling"],
     reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 50, // Increased for production resilience
-    reconnectionDelayMax: 5000,
+    reconnectionDelay: 500, // Faster reconnection
+    reconnectionAttempts: 50,
+    reconnectionDelayMax: 2000, // Reduced max delay
     forceNew: false,
     multiplex: true,
-    randomizationFactor: 0.5,
-    timeout: 20000,
+    randomizationFactor: 0.3, // Less randomization for faster fallback
+    timeout: 5000, // Reduced timeout for faster fallback to polling
     withCredentials: false,
     extraHeaders: {
       "X-Client-Version": "socket.io-client/4.8.3",

@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent } from "react";
+import { useEffect, useState, ChangeEvent, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import axios from "axios";
 import { useAuthStore } from "@/lib/store/authStore";
 import { initSocket, onEvent, offEvent, emitEvent } from "@/lib/socket";
+import {
+  startNotificationPolling,
+  stopNotificationPolling,
+  onPolledEvent,
+  offPolledEvent,
+} from "@/lib/notificationPolling";
 import { Room } from "@/types";
 import SpinningWheel from "@/components/room/SpinningWheel";
 import InviteModal from "@/components/room/InviteModal";
@@ -43,6 +49,7 @@ export default function RoomPage() {
   const [hasStarted, setHasStarted] = useState(false);
   const [selectedWinner, setSelectedWinner] = useState<string | null>(null);
   const [finalRotation, setFinalRotation] = useState<number | null>(null);
+  const [spinStartTime, setSpinStartTime] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"userid" | "email">("userid");
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [invitedPlayers, setInvitedPlayers] = useState<InvitedPlayer[]>([]);
@@ -54,33 +61,69 @@ export default function RoomPage() {
     visible: boolean;
   }>({ name: "", visible: false });
 
+  // Store the spin start time in a ref so it's immediately available
+  const spinStartTimeRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user?.userId || !token) {
       router.push("/login");
       return;
     }
 
     fetchRoom();
     initSocket(user?.userId);
+    startNotificationPolling(user.userId, token);
 
     const handleRoomUpdate = (updatedRoom: Room) => setRoom(updatedRoom);
     const handleSpinStart = () => setIsSpinning(true);
+
     const handleSpinBothReady = (data: any) => {
+      console.log("🎡 handleSpinBothReady fired", {
+        spinStartTime: data.spinStartTime,
+        now: Date.now(),
+        delay: data.spinStartTime - Date.now(),
+      });
+
+      // CRITICAL: Store spinStartTime in ref IMMEDIATELY so it's available synchronously
+      spinStartTimeRef.current = data.spinStartTime;
+
       setSelectedWinner(data.winnerName);
       setFinalRotation(data.finalRotation);
+      setSpinStartTime(data.spinStartTime);
+
+      // Set isSpinning which triggers the useEffect that calls spinWheel
+      // By this time, spinStartTimeRef is already set with the value
       setIsSpinning(true);
     };
-    const handleUserSpinReady = (data: any) => setRoom(data.room);
+
+    const handleUserSpinReady = (data: any) => {
+      // Show alert that opponent clicked start
+      if (data.readyUserName) {
+        setUserJoinAlert({
+          name: `${data.readyUserName} clicked START! Click to spin together!`,
+          visible: true,
+        });
+        // Auto-hide alert after 5 seconds
+        setTimeout(() => {
+          setUserJoinAlert({ name: "", visible: false });
+        }, 5000);
+      }
+
+      setRoom(data.room);
+    };
+
     const handleGameReset = (data: any) => {
+      spinStartTimeRef.current = null;
       setRoom(data.room);
       setIsSpinning(false);
       setWinner(null);
       setHasStarted(false);
       setSelectedWinner(null);
       setFinalRotation(null);
+      setSpinStartTime(null);
     };
+
     const handleUserJoinedRoom = (data: any) => {
-      console.log("👤 User joined room event received:", data);
       setRoom(data.room);
       // Show join alert
       if (data.joinedUser?.name) {
@@ -92,12 +135,19 @@ export default function RoomPage() {
       }
     };
 
+    // Attach Socket.IO listeners
     onEvent("room-updated", handleRoomUpdate);
     onEvent("spin-start", handleSpinStart);
     onEvent("spin-both-ready", handleSpinBothReady);
     onEvent("user-spin-ready", handleUserSpinReady);
     onEvent("game-reset", handleGameReset);
     onEvent("user-joined-room", handleUserJoinedRoom);
+
+    // Also attach polling listeners (works with or without Socket.IO)
+    onPolledEvent("spin-both-ready", handleSpinBothReady);
+    onPolledEvent("user-spin-ready", handleUserSpinReady);
+    onPolledEvent("game-reset", handleGameReset);
+    onPolledEvent("user-joined-room", handleUserJoinedRoom);
 
     return () => {
       offEvent("room-updated", handleRoomUpdate);
@@ -106,8 +156,13 @@ export default function RoomPage() {
       offEvent("user-spin-ready", handleUserSpinReady);
       offEvent("game-reset", handleGameReset);
       offEvent("user-joined-room", handleUserJoinedRoom);
+      offPolledEvent("spin-both-ready", handleSpinBothReady);
+      offPolledEvent("user-spin-ready", handleUserSpinReady);
+      offPolledEvent("game-reset", handleGameReset);
+      offPolledEvent("user-joined-room", handleUserJoinedRoom);
+      stopNotificationPolling();
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.userId, token]);
 
   const fetchRoom = async () => {
     try {
@@ -206,7 +261,12 @@ export default function RoomPage() {
         setRoom(res.data.room);
         setHasStarted(true);
         if (res.data.bothStarted) {
+          // CRITICAL: Set spinStartTime in ref IMMEDIATELY before updating state
+          spinStartTimeRef.current = res.data.spinStartTime;
+
           setSelectedWinner(res.data.winnerName);
+          setFinalRotation(res.data.finalRotation);
+          setSpinStartTime(res.data.spinStartTime);
           setIsSpinning(true);
         } else {
           emitEvent("user-ready", { roomId, room: res.data.room });
@@ -1100,6 +1160,7 @@ export default function RoomPage() {
               winner={winner}
               selectedWinner={selectedWinner}
               finalRotation={finalRotation}
+              spinStartTime={spinStartTime}
               onStartSpin={handleStartSpin}
               onResetGame={resetGame}
               canShowStartButton={!!canShowStartButton}

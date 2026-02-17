@@ -84,20 +84,22 @@ export async function POST(request: NextRequest) {
 
     await newRoom.save();
 
-    // Broadcast to all users that a new room is available
-    try {
-      broadcastToAll("room-created", {
-        roomId: newRoom.roomId,
-        creatorId: newRoom.creatorId,
-        creatorName: newRoom.creatorName,
-        creatorEmail: newRoom.creatorEmail,
-        status: newRoom.status,
-        timestamp: Date.now(),
-      });
-    } catch (socketError: any) {
-      // Broadcast failed - this is expected if Socket.IO is not configured
-      // The API response still succeeds
-    }
+    // Broadcast to all users that a new room is available asynchronously
+    setImmediate(() => {
+      try {
+        broadcastToAll("room-created", {
+          roomId: newRoom.roomId,
+          creatorId: newRoom.creatorId,
+          creatorName: newRoom.creatorName,
+          creatorEmail: newRoom.creatorEmail,
+          status: newRoom.status,
+          timestamp: Date.now(),
+        });
+      } catch (socketError: any) {
+        // Broadcast failed - this is expected if Socket.IO is not configured
+        // The API response still succeeds
+      }
+    });
 
     return NextResponse.json(
       {
