@@ -65,7 +65,7 @@ async function pollNotifications(token: string) {
 
       notifications.forEach((notification: Notification) => {
         console.log(
-          `📨 Received notification: ${notification.type}`,
+          `📨 [POLLING] Received notification: ${notification.type}`,
           notification.data,
         );
         emitNotification(notification.type, notification.data);

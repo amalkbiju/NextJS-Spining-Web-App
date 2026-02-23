@@ -52,6 +52,24 @@ const roomSchema = new mongoose.Schema(
       enum: ["waiting", "ready", "spinning", "completed"],
       default: "waiting",
     },
+    entryPrice: {
+      type: Number,
+      default: 100,
+      min: 0,
+    },
+    oppositeUserEntryPrice: {
+      type: Number,
+      default: null,
+    },
+    spinStartTime: {
+      type: Date,
+      default: null,
+    },
+    spinDuration: {
+      type: Number,
+      default: 5000,
+      description: "Spin duration in milliseconds",
+    },
   },
   { timestamps: true },
 );

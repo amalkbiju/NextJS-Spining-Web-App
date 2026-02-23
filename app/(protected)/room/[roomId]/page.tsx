@@ -14,6 +14,8 @@ import {
 import { Room } from "@/types";
 import SpinningWheel from "@/components/room/SpinningWheel";
 import InviteModal from "@/components/room/InviteModal";
+import EntryPriceCard from "@/components/room/EntryPriceCard";
+import SpinDetails from "@/components/room/SpinDetails";
 import {
   ArrowLeft,
   Copy,
@@ -82,6 +84,8 @@ export default function RoomPage() {
         spinStartTime: data.spinStartTime,
         now: Date.now(),
         delay: data.spinStartTime - Date.now(),
+        finalRotation: data.finalRotation,
+        winnerName: data.winnerName,
       });
 
       // CRITICAL: Store spinStartTime in ref IMMEDIATELY so it's available synchronously
@@ -775,6 +779,23 @@ export default function RoomPage() {
             </div>
           </div>
 
+          {/* Entry Price Card - Show if user is creator */}
+          {isCreator && room?.entryPrice && (
+            <EntryPriceCard
+              entryPrice={room.entryPrice}
+              rewards={[
+                { icon: "🪙", amount: room.entryPrice * 4, label: "Coins" },
+                { icon: "🏆", amount: 3, label: "Points" },
+                {
+                  icon: "⭐",
+                  amount: Math.round(room.entryPrice / 10),
+                  label: "Bonus",
+                },
+                { icon: "💫", amount: 200, label: "Extra" },
+              ]}
+            />
+          )}
+
           {isCreator && !room?.oppositeUserId && (
             <div
               style={{
@@ -1142,32 +1163,47 @@ export default function RoomPage() {
         </div>
 
         {room?.oppositeUserId ? (
-          <div
-            style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              backdropFilter: "blur(40px)",
-              borderRadius: "1rem",
-              padding: "2rem",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              animation: "fadeIn 0.8s 0.3s both",
-            }}
-          >
-            <SpinningWheel
-              player1Name={room?.creatorName || "Player 1"}
-              player2Name={room?.oppositeUserName || "Player 2"}
-              isSpinning={isSpinning}
-              onSpinComplete={handleSpinComplete}
-              winner={winner}
-              selectedWinner={selectedWinner}
-              finalRotation={finalRotation}
+          <>
+            {/* Spin Details */}
+            <SpinDetails
               spinStartTime={spinStartTime}
-              onStartSpin={handleStartSpin}
-              onResetGame={resetGame}
-              canShowStartButton={!!canShowStartButton}
-              isWaitingForOpponent={hasStarted && !oppositeUserReady}
-              oppositeUserReady={!!oppositeUserReady}
+              spinDuration={room?.spinDuration || 5000}
+              creatorName={room?.creatorName || "Player 1"}
+              creatorEntryPrice={room?.entryPrice || 0}
+              oppositeUserName={room?.oppositeUserName}
+              oppositeUserEntryPrice={room?.oppositeUserEntryPrice}
+              totalPrizePool={
+                (room?.entryPrice || 0) + (room?.oppositeUserEntryPrice || 0)
+              }
             />
-          </div>
+
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                backdropFilter: "blur(40px)",
+                borderRadius: "1rem",
+                padding: "2rem",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                animation: "fadeIn 0.8s 0.3s both",
+              }}
+            >
+              <SpinningWheel
+                player1Name={room?.creatorName || "Player 1"}
+                player2Name={room?.oppositeUserName || "Player 2"}
+                isSpinning={isSpinning}
+                onSpinComplete={handleSpinComplete}
+                winner={winner}
+                selectedWinner={selectedWinner}
+                finalRotation={finalRotation}
+                spinStartTime={spinStartTime}
+                onStartSpin={handleStartSpin}
+                onResetGame={resetGame}
+                canShowStartButton={!!canShowStartButton}
+                isWaitingForOpponent={hasStarted && !oppositeUserReady}
+                oppositeUserReady={!!oppositeUserReady}
+              />
+            </div>
+          </>
         ) : (
           <div
             style={{

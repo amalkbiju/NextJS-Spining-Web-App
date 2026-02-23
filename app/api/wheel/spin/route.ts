@@ -96,10 +96,14 @@ export async function POST(request: NextRequest) {
         roomId,
         winner: selectedWinner,
         winnerName: selectedWinnerName,
-        finalRotation: finalRotation % 360, // Send normalized rotation (0-360)
+        finalRotation: finalRotation, // Send FULL rotation value with all spins included
         spinStartTime: spinStartTime, // Synchronized start time for both clients
         timestamp: Date.now(),
       };
+
+      console.log(
+        `🎡 BOTH STARTED - Determining winner: ${selectedWinnerName}. Final rotation: ${(finalRotation % 360).toFixed(1)}°, spinStartTime: ${spinStartTime}`,
+      );
 
       // Store in memory IMMEDIATELY for polling fallback
       if (!pendingNotifications.has(room.creatorId)) {

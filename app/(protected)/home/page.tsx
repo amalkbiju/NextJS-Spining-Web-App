@@ -12,6 +12,8 @@ import {
   offPolledEvent,
 } from "@/lib/notificationPolling";
 import { Room } from "@/types";
+import EntryPriceSelector from "@/components/room/EntryPriceSelector";
+import UserHeader from "@/components/UserHeader";
 import {
   LogOut,
   Copy,
@@ -42,6 +44,10 @@ export default function HomePage() {
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [creatingRoom, setCreatingRoom] = useState(false);
+  const [showPriceSelector, setShowPriceSelector] = useState(false);
+  const [selectedEntryPrice, setSelectedEntryPrice] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isAuthenticated || !user?.userId || !token) {
@@ -181,15 +187,21 @@ export default function HomePage() {
   };
 
   const handleCreateRoom = async () => {
+    if (!selectedEntryPrice) {
+      setShowPriceSelector(true);
+      return;
+    }
+
     try {
       setCreatingRoom(true);
       const response = await axios.post(
         "/api/rooms",
-        { creatorName: user?.name },
+        { creatorName: user?.name, entryPrice: selectedEntryPrice },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (response.data.success) {
+        setSelectedEntryPrice(null);
         router.push(`/room/${response.data.room.roomId}`);
       }
     } catch (err: any) {
@@ -435,115 +447,12 @@ export default function HomePage() {
         }}
       >
         {/* Header */}
-        <header
-          style={{
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-            backdropFilter: "blur(20px)",
-            padding: "2rem 1.5rem",
-          }}
-        >
-          <div
-            style={{
-              maxWidth: "80rem",
-              margin: "0 auto",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "2rem",
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  fontSize: "2.25rem",
-                  fontWeight: "bold",
-                  color: "white",
-                  marginBottom: "0.5rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                }}
-              >
-                🎡 Spin & Win
-              </h1>
-              <p
-                style={{
-                  color: "rgba(255, 255, 255, 0.7)",
-                  fontSize: "0.95rem",
-                }}
-              >
-                Welcome back,{" "}
-                <span style={{ fontWeight: "600", color: "white" }}>
-                  {user?.name}
-                </span>
-                !
-              </p>
-            </div>
-
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              {/* User Profile Section */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  padding: "0.75rem 1.25rem",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  borderRadius: "0.75rem",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                }}
-              >
-                <User
-                  style={{
-                    width: "1.25rem",
-                    height: "1.25rem",
-                    color: "rgba(255, 255, 255, 0.7)",
-                  }}
-                />
-                <span
-                  style={{
-                    color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  {user?.email}
-                </span>
-              </div>
-
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.75rem 1.25rem",
-                  background: "linear-gradient(to right, #ef4444, #dc2626)",
-                  color: "white",
-                  fontWeight: "bold",
-                  borderRadius: "0.75rem",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLButtonElement).style.background =
-                    "linear-gradient(to right, #dc2626, #991b1b)";
-                  (e.target as HTMLButtonElement).style.transform =
-                    "scale(1.05)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLButtonElement).style.background =
-                    "linear-gradient(to right, #ef4444, #dc2626)";
-                  (e.target as HTMLButtonElement).style.transform = "scale(1)";
-                }}
-              >
-                <LogOut style={{ width: "1.125rem", height: "1.125rem" }} />
-                Logout
-              </button>
-            </div>
-          </div>
-        </header>
+        <UserHeader
+          userName={user?.name || "User"}
+          userEmail={user?.email || ""}
+          credits={user?.credits || 0}
+          onLogout={handleLogout}
+        />
 
         {/* Main Content Area */}
         <main
@@ -1118,6 +1027,23 @@ export default function HomePage() {
             </div>
           </div>
         </main>
+
+        {/* Entry Price Selector Modal */}
+        {showPriceSelector && (
+          <EntryPriceSelector
+            onSelect={(price) => {
+              setSelectedEntryPrice(price);
+              setShowPriceSelector(false);
+              // Trigger room creation with selected price
+              setTimeout(() => handleCreateRoom(), 100);
+            }}
+            onCancel={() => {
+              setShowPriceSelector(false);
+              setSelectedEntryPrice(null);
+              setCreatingRoom(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );

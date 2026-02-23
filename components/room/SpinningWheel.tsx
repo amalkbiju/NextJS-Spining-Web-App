@@ -174,59 +174,71 @@ export default function SpinningWheel({
     ctx.stroke();
 
     // Draw arrow pointer at top center - COMPLETELY SEPARATE FROM ROTATION
-    // This ensures the arrow is ALWAYS straight
+    // This ensures the arrow is ALWAYS straight and points directly UP
     ctx.save(); // Save clean state
     ctx.resetTransform(); // Reset all transforms
 
     const pointerX = centerX;
-    const pointerY = 12;
-    const arrowSize = 16;
-    const arrowHeight = 24;
+    const pointerY = 10;
+    const arrowWidth = 24;
+    const arrowHeight = 28;
 
-    // Arrow glow/shadow
-    ctx.fillStyle = "rgba(255, 215, 0, 0.5)";
+    // Arrow outer shadow/glow
+    ctx.fillStyle = "rgba(255, 215, 0, 0.6)";
     ctx.shadowColor = "rgba(255, 215, 0, 0.8)";
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 15;
     ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+    ctx.shadowOffsetY = 2;
 
+    // Draw outer arrow shape (triangle pointing up with base)
     ctx.beginPath();
-    ctx.moveTo(pointerX, pointerY);
-    ctx.lineTo(pointerX - arrowSize, pointerY + arrowHeight);
-    ctx.lineTo(pointerX - arrowSize * 0.35, pointerY + arrowHeight);
-    ctx.lineTo(pointerX - arrowSize * 0.35, pointerY + arrowHeight + 6);
-    ctx.lineTo(pointerX + arrowSize * 0.35, pointerY + arrowHeight + 6);
-    ctx.lineTo(pointerX + arrowSize * 0.35, pointerY + arrowHeight);
-    ctx.lineTo(pointerX + arrowSize, pointerY + arrowHeight);
+    ctx.moveTo(pointerX, pointerY); // Top point
+    ctx.lineTo(pointerX - arrowWidth / 2, pointerY + arrowHeight * 0.6); // Bottom left
+    ctx.lineTo(pointerX - arrowWidth * 0.2, pointerY + arrowHeight * 0.6); // Inner left
+    ctx.lineTo(pointerX - arrowWidth * 0.2, pointerY + arrowHeight); // Bottom inner left
+    ctx.lineTo(pointerX + arrowWidth * 0.2, pointerY + arrowHeight); // Bottom inner right
+    ctx.lineTo(pointerX + arrowWidth * 0.2, pointerY + arrowHeight * 0.6); // Inner right
+    ctx.lineTo(pointerX + arrowWidth / 2, pointerY + arrowHeight * 0.6); // Bottom right
     ctx.closePath();
     ctx.fill();
 
-    // Arrow border
-    ctx.strokeStyle = "#FF6500";
-    ctx.lineWidth = 2;
+    // Arrow outer border
+    ctx.strokeStyle = "#FF6B00";
+    ctx.lineWidth = 2.5;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.stroke();
 
-    // Arrow inner gradient highlight
+    // Arrow inner gradient highlight (more vibrant)
     const arrowGradient = ctx.createLinearGradient(
       pointerX,
       pointerY,
       pointerX,
       pointerY + arrowHeight,
     );
-    arrowGradient.addColorStop(0, "#FFED4E");
+    arrowGradient.addColorStop(0, "#FFFF00");
+    arrowGradient.addColorStop(0.5, "#FFED4E");
     arrowGradient.addColorStop(1, "#FFD700");
 
     ctx.fillStyle = arrowGradient;
     ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+
+    // Draw inner arrow (slightly smaller)
     ctx.beginPath();
     ctx.moveTo(pointerX, pointerY + 2);
-    ctx.lineTo(pointerX - arrowSize + 2, pointerY + arrowHeight - 2);
-    ctx.lineTo(pointerX - arrowSize * 0.35 + 1, pointerY + arrowHeight - 2);
-    ctx.lineTo(pointerX - arrowSize * 0.35 + 1, pointerY + arrowHeight - 2);
-    ctx.lineTo(pointerX + arrowSize * 0.35 - 1, pointerY + arrowHeight - 2);
-    ctx.lineTo(pointerX + arrowSize - 2, pointerY + arrowHeight - 2);
+    ctx.lineTo(pointerX - arrowWidth / 2 + 2, pointerY + arrowHeight * 0.6 - 1);
+    ctx.lineTo(
+      pointerX - arrowWidth * 0.2 + 1,
+      pointerY + arrowHeight * 0.6 - 1,
+    );
+    ctx.lineTo(pointerX - arrowWidth * 0.2 + 1, pointerY + arrowHeight - 2);
+    ctx.lineTo(pointerX + arrowWidth * 0.2 - 1, pointerY + arrowHeight - 2);
+    ctx.lineTo(
+      pointerX + arrowWidth * 0.2 - 1,
+      pointerY + arrowHeight * 0.6 - 1,
+    );
+    ctx.lineTo(pointerX + arrowWidth / 2 - 2, pointerY + arrowHeight * 0.6 - 1);
     ctx.closePath();
     ctx.fill();
 
@@ -240,24 +252,32 @@ export default function SpinningWheel({
     let finalRotationValue: number;
 
     if (finalRotation !== null && finalRotation !== undefined) {
-      finalRotationValue = spins * 360 + finalRotation;
+      // The API sends the FULL rotation value (already includes spins * 360)
+      // Just use it directly - don't add spins again!
+      finalRotationValue = finalRotation;
     } else {
-      // The arrow points UP at 0° rotation
-      // To determine which segment is under the arrow, we check what angle has the arrow pointing at it
-      // When rotation = 0°, the arrow points at 90° of the wheel
-      // When rotation = 45°, the arrow points at 45° of the wheel
-      // When rotation = 90°, the arrow points at 0° (or 360°) of the wheel
-
-      // Player 1 (text at top, segment 0-180°): To point arrow here, we need rotation that brings their segment to 90°
-      // Player 2 (text at bottom, segment 180-360°): To point arrow here, we need rotation that brings their segment to 90°
+      // IMPORTANT: Arrow points UP (at 12 o'clock / 0° on screen)
+      // The wheel rotates, and we want the winner's segment to be under the arrow
+      //
+      // Segment layout when rotation = 0°:
+      // - Player 1 segment: 0° to 180° (top half) - text at 0°/top
+      // - Player 2 segment: 180° to 360° (bottom half) - text at 180°/bottom
+      //
+      // When arrow (at top) looks down at the wheel:
+      // - If we DON'T rotate (rotation = 0°), arrow points at segment starting at 0° (Player 1's segment middle = 90° in segment)
+      // - If we rotate 180° (rotation = 180°), arrow points at segment starting at 180° (Player 2's segment middle = 270° in segment)
+      //
+      // To make arrow point at Player 1's segment middle: rotation = 0° + random(0-180°)
+      // To make arrow point at Player 2's segment middle: rotation = 180° + random(0-180°)
 
       if (selectedWinner === player1Name) {
-        // Point arrow to Player 1 (upper half)
-        // Segment 0 is at 0-180°, middle at 90°, so we need rotation = 0 to point at 90°
+        // Make arrow point to Player 1 (upper half of wheel)
+        // Arrow at top points down at rotation 0-180°
         finalRotationValue = spins * 360 + Math.random() * 180;
       } else if (selectedWinner === player2Name) {
-        // Point arrow to Player 2 (lower half)
-        // Segment 1 is at 180-360°, middle at 270°, so we need rotation = 180 to point at 270°
+        // Make arrow point to Player 2 (lower half of wheel)
+        // Arrow at top points down at rotation 180-360°
+        // Use 180 + random(0-180) to get 180-360°
         finalRotationValue = spins * 360 + 180 + Math.random() * 180;
       } else {
         finalRotationValue = spins * 360 + Math.random() * 360;
@@ -267,20 +287,29 @@ export default function SpinningWheel({
     console.log("🎡 spinWheel called", {
       spinStartTime,
       spinStartTimeRef: spinStartTimeRef?.current,
+      selectedWinner,
+      finalRotation,
       now: Date.now(),
       finalRotationValue,
     });
 
     // CRITICAL SYNCHRONIZATION: Use spinStartTimeRef for immediate access
     // spinStartTimeRef is set synchronously before isSpinning state update
+    let retryCount = 0;
     const executeAnimation = () => {
       // Get spinStartTime from ref (immediate) or fallback to state
       const actualSpinStartTime = spinStartTimeRef?.current || spinStartTime;
 
       if (!actualSpinStartTime) {
         // If spinStartTime not available yet, wait a bit and retry
-        console.log("⏳ Waiting for spinStartTime...");
-        setTimeout(() => executeAnimation(), 10);
+        retryCount++;
+        console.log(`⏳ Waiting for spinStartTime... (retry ${retryCount})`);
+        if (retryCount < 50) {
+          // Try for up to 500ms
+          setTimeout(() => executeAnimation(), 10);
+        } else {
+          console.error("❌ Timeout waiting for spinStartTime");
+        }
         return;
       }
 

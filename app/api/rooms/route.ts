@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { creatorName } = await request.json();
+    const { creatorName, entryPrice } = await request.json();
     if (!creatorName) {
       return NextResponse.json(
         { success: false, message: "Creator name is required" },
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       creatorName,
       creatorEmail: decoded.email,
       status: "waiting",
+      entryPrice: entryPrice || 100,
     });
 
     await newRoom.save();
