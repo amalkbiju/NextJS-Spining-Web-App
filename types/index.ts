@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   userId: string;
+  credits: number;
   createdAt: string;
 }
 
@@ -20,6 +21,10 @@ export interface Room {
   winner: string | null;
   status: "waiting" | "ready" | "spinning" | "completed";
   invitedEmail?: string | null;
+  entryPrice?: number;
+  oppositeUserEntryPrice?: number;
+  spinStartTime?: string | null;
+  spinDuration?: number;
   createdAt: string;
 }
 
